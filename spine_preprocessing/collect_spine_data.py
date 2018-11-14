@@ -199,7 +199,7 @@ class SpineImageDataPreparer:
             if self.do_sliding_windows:
                 self.make_and_save_sliding_windows(row, image_dir)
             else:
-                file_path = os.path.join(image_dir, f'image_{index}_data.npz')
+                file_path = os.path.join(image_dir, 'image_{}_data.npz'.format(index))
                 self.save_images_and_data(row, file_path)
         self.save_file_list()
         print('Saving done yay')
@@ -221,13 +221,13 @@ class SpineImageDataPreparer:
             self.write_data(path, row['images'])
 
     def create_image_directory(self, index):
-        image_dir = os.path.join(self.save_directory, f'image{index}')
+        image_dir = os.path.join(self.save_directory, 'image{}'.format(index))
         if not os.path.exists(image_dir):
             os.makedirs(image_dir)
         return image_dir
 
     def save_sliding_window(self, image_dir, x, y, window, boxes_in_window):
-        window_file_path = os.path.join(image_dir, f'window_x_{x}_y_{y}_data.npz')
+        window_file_path = os.path.join(image_dir, 'window_x_{}_y_{}_data.npz'.format(x,y))
         self.write_data(window_file_path, window, boxes_in_window)
 
     def write_data(self, path, image, boxes=None):

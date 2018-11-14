@@ -13,13 +13,13 @@ from keras.layers import Input, Lambda, Conv2D
 from keras.models import load_model, Model
 import matplotlib.pyplot as plt
 
-from spine_yolo.data_generator import DataGenerator
-from spine_yolo.spine_preprocessing.collect_spine_data import SpineImageDataPreparer
-from spine_yolo.spine_preprocessing.spine_preprocessing import process_data
-from spine_yolo.yad2k.models.keras_yolo import (yolo_body,
+from data_generator import DataGenerator
+from spine_preprocessing.collect_spine_data import SpineImageDataPreparer
+from spine_preprocessing.spine_preprocessing import process_data
+from yad2k.models.keras_yolo import (yolo_body,
                                                 yolo_eval, yolo_head, yolo_loss)
-from spine_yolo.yad2k.utils.draw_boxes import draw_boxes
-from spine_yolo.yolo_argparser import YoloArgparse
+from yad2k.utils.draw_boxes import draw_boxes
+from yolo_argparser import YoloArgparse
 
 argparser = YoloArgparse()
 

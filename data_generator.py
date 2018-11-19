@@ -6,8 +6,8 @@ from skimage import transform
 import PIL
 # import cv2
 
-from spine_yolo.spine_preprocessing.spine_preprocessing import process_data
-from spine_yolo.yad2k.models.keras_yolo import preprocess_true_boxes
+from spine_preprocessing.spine_preprocessing import process_data
+from yolo3.model import preprocess_true_boxes
 
 
 def random_rotation_with_boxes(x, boxes, rg, row_axis=0, col_axis=1, channel_axis=2,

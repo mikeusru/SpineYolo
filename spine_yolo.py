@@ -8,17 +8,18 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 from keras import backend as K
-from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
+from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 from keras.layers import Input, Lambda, Conv2D
+from keras.optimizers import Adam
 from keras.models import load_model, Model
 import matplotlib.pyplot as plt
 
 from data_generator import DataGenerator
 from spine_preprocessing.collect_spine_data import SpineImageDataPreparer
 from spine_preprocessing.spine_preprocessing import process_data
-from yad2k.models.keras_yolo import (yolo_body,
-                                                yolo_eval, yolo_head, yolo_loss)
-from yad2k.utils.draw_boxes import draw_boxes
+from yolo3.model import (yolo_body,
+                         yolo_eval, yolo_head, yolo_loss)
+from yolo3.draw_boxes import draw_boxes
 from yolo_argparser import YoloArgparse
 
 argparser = YoloArgparse()
@@ -33,7 +34,8 @@ MODEL_FILES = {1: 'trained_stage_1',
                3: 'trained_stage_3',
                'best': 'trained_stage_3_best',
                'latest': 'trained_latest',
-               'testing': 'yolo_spine_model_testing'}
+               'testing': 'yolo_spine_model_testing',
+               'final': 'trained_final'}
 
 IMAGE_INPUT = Input(shape=(416, 416, 3))
 BOXES_INPUT = Input(shape=(None, 5))
@@ -60,6 +62,7 @@ class SpineYolo(object):
         self.matching_boxes_shape = (13, 13, 5, 5)
         self.model_body = None
         self.model = None
+        self.input_shape = (416, 416)
 
     def set_log_dir(self, log_dir):
         self.log_dir = log_dir
@@ -137,7 +140,9 @@ class SpineYolo(object):
         data_len = self.file_list.size
         train_array = np.array(range(int(train_validation_split * data_len * ratio_of_training_data_to_use)))
         validation_array = np.array(range(int(train_validation_split * data_len), data_len))
+        np.random.seed(10101)
         np.random.shuffle(self.file_list)
+        np.random.seed(None)
         partition = dict(train=train_array,
                          validation=validation_array)
         self.partition = partition
@@ -160,67 +165,35 @@ class SpineYolo(object):
             Warning("Could not open anchors file, using default.")
             self.anchors = YOLO_ANCHORS
 
-    def create_model(self, load_pretrained=False, freeze_body=True):
-        """
-        returns the body of the model and the model
+    def create_model(self, load_pretrained=True, freeze_body=2,
+                     weights_path='model_data/yolo_weights.h5'):
+        '''create the training model'''
+        K.clear_session()  # get a new session
+        image_input = Input(shape=(None, None, 3))
+        h, w = self.input_shape
+        num_anchors = len(self.anchors)
+        num_classes = len(self.class_names)
 
-        # Params:
+        y_true = [Input(shape=(h // {0: 32, 1: 16, 2: 8}[l], w // {0: 32, 1: 16, 2: 8}[l],
+                               num_anchors // 3, num_classes + 5)) for l in range(3)]
 
-        load_pretrained: whether or not to load the pretrained model or initialize all weights
-
-        freeze_body: whether or not to freeze all weights except for the last layer's
-
-        # Returns:
-
-        model_body: YOLOv2 with new output layer
-
-        model: YOLOv2 with custom loss Lambda layer
-
-        """
-
-        # Create model input layers.
-
-        detectors_mask_input = Input(shape=self.detectors_mask_shape)
-        matching_boxes_input = Input(shape=self.matching_boxes_shape)
-
-        # Create model body.
-        yolo_model = yolo_body(IMAGE_INPUT, len(self.anchors), len(self.class_names))
-        topless_yolo = Model(yolo_model.input, yolo_model.layers[-2].output)
+        model_body = yolo_body(image_input, num_anchors // 3, num_classes)
+        print('Create YOLOv3 model with {} anchors and {} classes.'.format(num_anchors, num_classes))
 
         if load_pretrained:
-            # Save topless yolo:
-            topless_yolo_path = os.path.join('..', 'spine_yolo', 'model_data', 'yolo_topless.h5')
-            if not os.path.exists(topless_yolo_path):
-                print("CREATING TOPLESS WEIGHTS FILE")
-                yolo_path = os.path.join('..', 'spine_yolo', 'model_data', 'yolo.h5')
-                self.model_body = load_model(yolo_path)
-                self.model_body = Model(self.model_body.inputs, self.model_body.layers[-2].output)
-                self.model_body.save_weights(topless_yolo_path)
-            topless_yolo.load_weights(topless_yolo_path)
+            model_body.load_weights(weights_path, by_name=True, skip_mismatch=True)
+            print('Load weights {}.'.format(weights_path))
+            if freeze_body in [1, 2]:
+                # Freeze darknet53 body or freeze all but 3 output layers.
+                num = (185, len(model_body.layers) - 3)[freeze_body - 1]
+                for i in range(num): model_body.layers[i].trainable = False
+                print('Freeze the first {} layers of total {} layers.'.format(num, len(model_body.layers)))
 
-        if freeze_body:
-            for layer in topless_yolo.layers:
-                layer.trainable = False
-        final_layer = Conv2D(len(self.anchors) * (5 + len(self.class_names)), (1, 1), activation='linear')(
-            topless_yolo.output)
-
-        self.model_body = Model(IMAGE_INPUT, final_layer)
-
-        # Place model loss on CPU to reduce GPU memory usage.
-        with tf.device('/cpu:0'):
-            # TODO: Replace Lambda with custom Keras layer for loss.
-            model_loss = Lambda(
-                yolo_loss,
-                output_shape=(1,),
-                name='yolo_loss',
-                arguments={'anchors': self.anchors,
-                           'num_classes': len(self.class_names)})([
-                self.model_body.output, BOXES_INPUT,
-                detectors_mask_input, matching_boxes_input])
-
-        self.model = Model(
-            [self.model_body.input, BOXES_INPUT, detectors_mask_input,
-             matching_boxes_input], model_loss)
+        model_loss = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
+                            arguments={'anchors': self.anchors, 'num_classes': num_classes, 'ignore_thresh': 0.5})(
+            [*model_body.output, *y_true])
+        model = Model([model_body.input, *y_true], model_loss)
+        self.model = model
 
     def train(self):
         """
@@ -233,54 +206,49 @@ class SpineYolo(object):
         best weights according to val_loss is saved as trained_stage_3_best.h5
         """
         logging = TensorBoard(log_dir=self.log_dir)
-        checkpoint_final_best = ModelCheckpoint(self.get_model_file('best'), monitor='val_loss',
-                                                save_weights_only=True, save_best_only=True)
-        checkpoint = ModelCheckpoint(self.get_model_file('latest'), monitor='val_loss',
-                                     save_weights_only=True, save_best_only=True)
+        checkpoint = ModelCheckpoint(self.log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
+                                     monitor='val_loss', save_weights_only=True, save_best_only=True, period=3)
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
 
         early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=15, verbose=1, mode='auto')
 
+        # TODO : Make sure self.starting_weights are preloaded
         first_round_weights = self.starting_weights
-
-        # if starting from scratch, train model with frozen body first
-        if self.from_scratch:
-            first_round_weights = self.get_model_file(1)
-            self.create_model()
-            self.model.compile(
-                optimizer='adam', loss={
-                    'yolo_loss': lambda y_true, y_pred: y_pred
-                })  # This is a hack to use the custom loss function in the last layer.
-
-            params = {'dim': (416, 416),
-                      'batch_size': 32,
-                      'n_classes': 1,
-                      'n_channels': 3,
-                      'shuffle': True}
-
-            training_generator, validation_generator = self.make_data_generators(params)
-
-            self.model.fit_generator(generator=training_generator,
-                                     validation_data=validation_generator,
-                                     use_multiprocessing=True,
-                                     workers=6,
-                                     epochs=5,
-                                     callbacks=[logging, checkpoint])
-
-            self.model.save_weights(first_round_weights)
-            self.draw(image_set='validation', weights_name=first_round_weights,
-                      out_path="output_images_stage_1", save_all=False)
-
-        self.create_model(load_pretrained=False, freeze_body=False)
-
-        self.model.load_weights(first_round_weights)
-
+        self.create_model(freeze_body=2, weights_path=self.starting_weights)
         self.model.compile(
-            optimizer='adam', loss={
+            optimizer=Adam(lr=1e-3), loss={
                 'yolo_loss': lambda y_true, y_pred: y_pred
             })  # This is a hack to use the custom loss function in the last layer.
 
-        params = {'dim': (416, 416),
-                  'batch_size': 8,
+        params = {'dim': self.input_shape,
+                  'batch_size': 32,
+                  'n_classes': 1,
+                  'n_channels': 3,
+                  'shuffle': True}
+
+        training_generator, validation_generator = self.make_data_generators(params)
+
+        self.model.fit_generator(generator=training_generator,
+                                 validation_data=validation_generator,
+                                 use_multiprocessing=True,
+                                 workers=6,
+                                 epochs=10,
+                                 callbacks=[logging, checkpoint])
+
+        self.model.save_weights(self.get_model_file(1))
+        self.draw(image_set='validation', weights_name=first_round_weights,
+                  out_path="output_images_stage_1", save_all=False)
+
+        # unfreeze
+        for i in range(len(self.model.layers)):
+            self.model.layers[i].trainable = True
+
+        self.model.compile(optimizer=Adam(lr=1e-4),
+                           loss={'yolo_loss': lambda y_true, y_pred: y_pred})  # recompile to apply the change
+        print('Unfreeze all of the layers.\n')
+
+        params = {'dim': self.input_shape,
+                  'batch_size': 16,
                   'n_classes': 1,
                   'n_channels': 3,
                   'shuffle': True}
@@ -291,22 +259,15 @@ class SpineYolo(object):
                                  validation_data=validation_generator,
                                  use_multiprocessing=True,
                                  workers=4,
-                                 epochs=30,
-                                 callbacks=[logging, checkpoint])
+                                 epochs=100,
+                                 initial_epoch=10,
+                                 callbacks=[logging, checkpoint, reduce_lr, early_stopping])
 
-        self.model.save_weights(self.get_model_file(2))
+        self.model.save_weights(self.get_model_file('final'))
 
         self.draw(image_set='validation', weights_name=self.get_model_file(2),
                   out_path="output_images_stage_2", save_all=False)
 
-        self.model.fit_generator(generator=training_generator,
-                                 validation_data=validation_generator,
-                                 use_multiprocessing=True,
-                                 workers=4,
-                                 epochs=30,
-                                 callbacks=[logging, checkpoint_final_best, early_stopping])
-
-        self.model.save_weights(self.get_model_file(3))
         self.model_body.load_weights(self.get_model_file('best'))
         self.model_body.save(self.get_model_file('testing'))
 

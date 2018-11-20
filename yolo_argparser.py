@@ -24,7 +24,7 @@ class YoloArgparse(argparse.ArgumentParser):
             '-s',
             '--starting_weights',
             help="path for starting weights",
-            default=os.path.join('..', 'spine_yolo', 'trained_stage_3_best.h5'))
+            default=os.path.join('trained_stage_3_best.h5'))
 
         self.add_argument(
             '-f',
@@ -36,7 +36,7 @@ class YoloArgparse(argparse.ArgumentParser):
             '-a',
             '--anchors_path',
             help='path to anchors file, defaults to yolo_anchors.txt',
-            default=os.path.join('..', 'spine_yolo', 'model_data', 'yolo_anchors.txt'))
+            default=os.path.join('model_data', 'yolo_anchors.txt'))
 
         self.add_argument(
             '-o',
@@ -48,4 +48,4 @@ class YoloArgparse(argparse.ArgumentParser):
             '-c',
             '--classes_path',
             help='path to classes file, defaults to pascal_classes.txt',
-            default=os.path.join('..', 'spine_yolo', 'model_data', 'spine_classes.txt'))
+            default=os.path.join('model_data', 'spine_classes.txt'))

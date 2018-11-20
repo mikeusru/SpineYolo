@@ -1,25 +1,23 @@
 """
 This is a class for training and evaluating yadk2
 """
-import datetime
 import os
 
+import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
 from PIL import Image
 from keras import backend as K
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
-from keras.layers import Input, Lambda, Conv2D
-from keras.optimizers import Adam
+from keras.layers import Input, Lambda
 from keras.models import load_model, Model
-import matplotlib.pyplot as plt
+from keras.optimizers import Adam
 
 from data_generator import DataGenerator
 from spine_preprocessing.collect_spine_data import SpineImageDataPreparer
 from spine_preprocessing.spine_preprocessing import process_data
-from yolo3.model import (yolo_body,
-                         yolo_eval, yolo_head, yolo_loss)
 from yolo3.draw_boxes import draw_boxes
+from yolo3.model import (yolo_body,
+                         yolo_eval, yolo_loss)
 from yolo_argparser import YoloArgparse
 
 argparser = YoloArgparse()
@@ -63,6 +61,7 @@ class SpineYolo(object):
         self.model_body = None
         self.model = None
         self.input_shape = (416, 416)
+        self.input_image_shape = None
 
     def set_log_dir(self, log_dir):
         self.log_dir = log_dir
@@ -88,8 +87,7 @@ class SpineYolo(object):
         self.training_on = do_training
 
     def run_on_single_image(self, image_file):
-        model_path = self.trained_model_path
-        self.set_model_body(model_path)
+        self.load_yolo_model()
         spine_data_preparer = SpineImageDataPreparer()
         spine_data_preparer.set_labeled_state(False)
         spine_data_preparer.set_sliding_window_props(False)
@@ -114,15 +112,17 @@ class SpineYolo(object):
         print(out_scores)
         print(out_classes)
 
+    # TODO: Run this before doing draw
+    def load_yolo_model(self):
+        self.model = load_model(self.trained_model_path, compile=False)
+
     def run(self):
         if self.training_on:
             self.train()
             self.draw(image_set='validation',  # assumes training/validation split is 0.9
-                      weights_name=self.get_model_file('best'),
                       save_all=False)
         else:
-            self.draw(test_model_path=self.trained_model_path,
-                      image_set='validation',
+            self.draw(image_set='validation',
                       save_all=True)
 
     def prepare_image_data(self, images_path, is_labeled=False):
@@ -167,7 +167,7 @@ class SpineYolo(object):
 
     def create_model(self, load_pretrained=True, freeze_body=2,
                      weights_path='model_data/yolo_weights.h5'):
-        '''create the training model'''
+        """create the training model"""
         K.clear_session()  # get a new session
         image_input = Input(shape=(None, None, 3))
         h, w = self.input_shape
@@ -186,7 +186,8 @@ class SpineYolo(object):
             if freeze_body in [1, 2]:
                 # Freeze darknet53 body or freeze all but 3 output layers.
                 num = (185, len(model_body.layers) - 3)[freeze_body - 1]
-                for i in range(num): model_body.layers[i].trainable = False
+                for i in range(num):
+                    model_body.layers[i].trainable = False
                 print('Freeze the first {} layers of total {} layers.'.format(num, len(model_body.layers)))
 
         model_loss = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
@@ -214,7 +215,7 @@ class SpineYolo(object):
 
         # TODO : Make sure self.starting_weights are preloaded
         first_round_weights = self.starting_weights
-        self.create_model(freeze_body=2, weights_path=self.starting_weights)
+        self.create_model(freeze_body=2, weights_path=first_round_weights)
         self.model.compile(
             optimizer=Adam(lr=1e-3), loss={
                 'yolo_loss': lambda y_true, y_pred: y_pred
@@ -236,8 +237,7 @@ class SpineYolo(object):
                                  callbacks=[logging, checkpoint])
 
         self.model.save_weights(self.get_model_file(1))
-        self.draw(image_set='validation', weights_name=first_round_weights,
-                  out_path="output_images_stage_1", save_all=False)
+        self.draw(image_set='validation', out_path="output_images_stage_1", save_all=False)
 
         # unfreeze
         for i in range(len(self.model.layers)):
@@ -265,11 +265,7 @@ class SpineYolo(object):
 
         self.model.save_weights(self.get_model_file('final'))
 
-        self.draw(image_set='validation', weights_name=self.get_model_file(2),
-                  out_path="output_images_stage_2", save_all=False)
-
-        self.model_body.load_weights(self.get_model_file('best'))
-        self.model_body.save(self.get_model_file('testing'))
+        self.draw(image_set='validation', out_path="output_images_stage_2", save_all=False)
 
     def make_data_generators(self, params):
         if self.overfit_single_image:
@@ -289,31 +285,14 @@ class SpineYolo(object):
                                              **params)
         return training_generator, validation_generator
 
-    def set_model_body(self, test_model_path, weights_name=None):
-        if test_model_path is None:
-            self.model_body.load_weights(weights_name)
-        else:
-            try:
-                self.model_body = load_model(test_model_path)
-            except ValueError:
-                self.create_model()
-                self.model_body.load_weights(test_model_path)
-
-    def draw(self, test_model_path=None, image_set='validation',
-             weights_name=None,
-             out_path="output_images", save_all=True):
+    def draw(self, image_set='validation', out_path="output_images", save_all=True):
         """
         Draw bounding boxes on image data
         """
-        if weights_name is None:
-            weights_name = self.get_model_file('best')
-        self.set_model_body(test_model_path, weights_name)
-        if self.overfit_single_image:
-            partition_eval = self.partition["train"][[0, 0]]
-        else:
-            partition_eval = self.partition[image_set]
+        partition_eval = self.partition[image_set]
         # load validation data
         # only annotate 100 images max
+
         if len(partition_eval) > 100:
             partition_eval = np.random.choice(partition_eval, (100,))
         files_to_load = self.file_list[partition_eval]
@@ -335,7 +314,6 @@ class SpineYolo(object):
                     K.learning_phase(): 0
                 })
             print('Found {} boxes for image.'.format(len(out_boxes)))
-            print(out_boxes)
 
             # Plot image with predicted boxes.
             image_with_boxes = draw_boxes(image_data[i][0], out_boxes, out_classes,
@@ -346,10 +324,10 @@ class SpineYolo(object):
                 image.save(os.path.join(out_path_full, str(i) + '.tif'))
 
     def create_yolo_output_variables(self):
-        yolo_outputs = yolo_head(self.model_body.output, self.anchors, len(self.class_names))
         input_image_shape = K.placeholder(shape=(2,))
         boxes, scores, classes = yolo_eval(
-            yolo_outputs, input_image_shape, score_threshold=0.5, iou_threshold=0.2)
+            self.model.output, self.anchors, len(self.class_names), input_image_shape, score_threshold=0.5,
+            iou_threshold=0.2)
         return boxes, scores, classes, input_image_shape
 
     @staticmethod

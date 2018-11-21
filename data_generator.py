@@ -175,6 +175,6 @@ class DataGenerator(keras.utils.Sequence):
         detectors_mask = [0 for i in range(len(boxes))]
         matching_true_boxes = [0 for i in range(len(boxes))]
         for i, box in enumerate(boxes):
-            detectors_mask[i], matching_true_boxes[i] = preprocess_true_boxes(box, self.anchors, self.dim)
+            detectors_mask[i], matching_true_boxes[i] = preprocess_true_boxes(box, self.dim, self.anchors, self.n_classes)
         return np.array(detectors_mask), np.array(matching_true_boxes)
 

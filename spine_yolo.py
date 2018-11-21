@@ -60,6 +60,8 @@ class SpineYolo(object):
         self.matching_boxes_shape = (13, 13, 5, 5)
         self.model_body = None
         self.model = None
+        self.bottleneck_model = None
+        self.last_layer_model = None
         self.input_shape = (416, 416)
         self.input_image_shape = None
 
@@ -76,6 +78,9 @@ class SpineYolo(object):
     def set_data_path(self, data_path=None):
         self.data_path = os.path.expanduser(data_path)
         self.file_list = np.load(self.data_path)['file_list']
+
+    def set_starting_weights(self, path):
+        self.starting_weights = path
 
     def set_trained_model_path(self, path):
         self.trained_model_path = path
@@ -166,7 +171,7 @@ class SpineYolo(object):
             self.anchors = YOLO_ANCHORS
 
     def create_model(self, load_pretrained=True, freeze_body=2,
-                     weights_path='model_data/yolo_weights.h5'):
+                     weights_path='model_data/yolo.h5'):
         """create the training model"""
         K.clear_session()  # get a new session
         image_input = Input(shape=(None, None, 3))
@@ -190,11 +195,32 @@ class SpineYolo(object):
                     model_body.layers[i].trainable = False
                 print('Freeze the first {} layers of total {} layers.'.format(num, len(model_body.layers)))
 
+        # get output of second last layers and create bottleneck model of it
+        out1 = model_body.layers[246].output
+        out2 = model_body.layers[247].output
+        out3 = model_body.layers[248].output
+        bottleneck_model = Model([model_body.input, *y_true], [out1, out2, out3])
+
+        # create last layer model of last layers from yolo model
+        in0 = Input(shape=bottleneck_model.output[0].shape[1:].as_list())
+        in1 = Input(shape=bottleneck_model.output[1].shape[1:].as_list())
+        in2 = Input(shape=bottleneck_model.output[2].shape[1:].as_list())
+        last_out0 = model_body.layers[249](in0)
+        last_out1 = model_body.layers[250](in1)
+        last_out2 = model_body.layers[251](in2)
+        model_last = Model(inputs=[in0, in1, in2], outputs=[last_out0, last_out1, last_out2])
+        model_loss_last = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
+                                 arguments={'anchors': self.anchors, 'num_classes': num_classes, 'ignore_thresh': 0.5})(
+            [*model_last.output, *y_true])
+        last_layer_model = Model([in0, in1, in2, *y_true], model_loss_last)
+
         model_loss = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
                             arguments={'anchors': self.anchors, 'num_classes': num_classes, 'ignore_thresh': 0.5})(
             [*model_body.output, *y_true])
         model = Model([model_body.input, *y_true], model_loss)
         self.model = model
+        self.bottleneck_model = bottleneck_model
+        self.last_layer_model = last_layer_model
 
     def train(self):
         """
@@ -213,7 +239,6 @@ class SpineYolo(object):
 
         early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=15, verbose=1, mode='auto')
 
-        # TODO : Make sure self.starting_weights are preloaded
         first_round_weights = self.starting_weights
         self.create_model(freeze_body=2, weights_path=first_round_weights)
         self.model.compile(
@@ -228,6 +253,12 @@ class SpineYolo(object):
                   'shuffle': True}
 
         training_generator, validation_generator = self.make_data_generators(params)
+
+        # perform bottleneck training
+        if not os.path.isfile("bottlenecks.npz"):
+            print("calculating bottlenecks")
+            bottlenecks = self.bottleneck_model.predict_generator(training_generator, max_queue_size=1)
+            np.savez("bottlenecks.npz", bot0=bottlenecks[0], bot1=bottlenecks[1], bot2=bottlenecks[2])
 
         self.model.fit_generator(generator=training_generator,
                                  validation_data=validation_generator,

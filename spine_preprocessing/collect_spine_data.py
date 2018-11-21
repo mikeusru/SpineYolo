@@ -18,7 +18,7 @@ class SpineImageDataPreparer:
         self.sliding_window_side = 256
         self.sliding_window_step = 128
         self.initial_directory = '../test'
-        self.save_directory = os.path.join('..', 'spine_yolo', 'data', 'images', 'in')
+        self.save_directory = os.path.join('data', 'images', 'in')
         self.output_file_list = []
         self.dataframe = None
 

@@ -24,7 +24,7 @@ class YoloArgparse(argparse.ArgumentParser):
             '-s',
             '--starting_weights',
             help="path for starting weights",
-            default=os.path.join('trained_stage_3_best.h5'))
+            default=os.path.join('model_data', 'yolo.h5'))
 
         self.add_argument(
             '-f',

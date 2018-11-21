@@ -242,7 +242,7 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
 
     Returns
     -------
-    y_true: list of array, shape like yolo_outputs, xywh are reletive value
+    y_true: list of array, shape like yolo_outputs, xywh are relative value
 
     '''
     assert (true_boxes[..., 4]<num_classes).all(), 'class id must be less than num_classes'

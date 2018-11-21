@@ -40,6 +40,13 @@ class SpineYoloGui(tk.Tk):
                                                        font=NORMAL_FONT,
                                                        command=self.select_training_data)
         gui['select_training_data_button'].grid(row=0, column=2, sticky='nw', padx=10, pady=10)
+
+
+        gui['prepare_training_data_button'] = tk.Button(self, text="Prepare",
+                                                       font=LARGE_FONT,
+                                                       command=self.prepare_training_data)
+        gui['prepare_training_data_button'].grid(row=0, column=3, sticky='nw', padx=10, pady=10)
+
         gui['training_data_folder_preview_entry'] = ttk.Entry(self,
                                                               width=80,
                                                               textvariable=self.training_data_path,
@@ -76,6 +83,10 @@ class SpineYoloGui(tk.Tk):
                             title="Choose a directory")
         self.training_data_path.set(path)
 
+    def prepare_training_data(self):
+        self.spine_yolo.toggle_training(True)
+        self.spine_yolo.prepare_image_data(self.training_data_path.get(), is_labeled=True)
+
     def select_model(self):
         path = askopenfilename(initialdir=self.trained_model_path.get(),
                                title="Choose a pre-trained model")
@@ -101,7 +112,7 @@ class SpineYoloGui(tk.Tk):
         self.select_folder_for_newly_trained_model()
         self.set_training_log_dir()
         self.spine_yolo.toggle_training(True)
-        self.spine_yolo.prepare_image_data(self.training_data_path.get(), is_labeled=True)
+        self.spine_yolo.set_starting_weights(self.trained_model_path.get())
         self.spine_yolo.set_classes()
         self.spine_yolo.set_anchors()
         self.spine_yolo.set_partition(train_validation_split=.9, ratio_of_training_data_to_use=1)

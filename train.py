@@ -1,7 +1,7 @@
 """
 Retrain the YOLO model for your own dataset.
 """
-
+import os
 import numpy as np
 import keras.backend as K
 from keras.layers import Input, Lambda
@@ -14,9 +14,9 @@ from yolo3.utils import get_random_data
 
 
 def _main():
-    annotation_path = 'train.txt'
+    annotation_path = os.path.join('C','Users','smirnovm','Documents','Data','yolov3_keras_spine_training','train.txt')
     log_dir = 'logs/000/'
-    classes_path = 'model_data/voc_classes.txt'
+    classes_path = 'model_data/spine_classes.txt'
     anchors_path = 'model_data/yolo_anchors.txt'
     class_names = get_classes(classes_path)
     num_classes = len(class_names)

@@ -14,7 +14,7 @@ from yolo3.utils import get_random_data
 
 
 def _main():
-    annotation_path = os.path.join('C','Users','smirnovm','Documents','Data','yolov3_keras_spine_training','train.txt')
+    annotation_path = os.path.join('C:','Users','smirnovm','Documents','Data','yolov3_keras_spine_training','train.txt')
     log_dir = 'logs/000/'
     classes_path = 'model_data/spine_classes.txt'
     anchors_path = 'model_data/yolo_anchors.txt'
@@ -30,7 +30,7 @@ def _main():
             freeze_body=2, weights_path='model_data/tiny_yolo_weights.h5')
     else:
         model = create_model(input_shape, anchors, num_classes,
-            freeze_body=2, weights_path='model_data/yolo_weights.h5') # make sure you know what you freeze
+            freeze_body=2, weights_path='model_data/yolo.h5') # make sure you know what you freeze
 
     logging = TensorBoard(log_dir=log_dir)
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
@@ -41,6 +41,8 @@ def _main():
     val_split = 0.1
     with open(annotation_path) as f:
         lines = f.readlines()
+    lines = [line for line in lines if len(line.strip()) > 0]
+    lines = [line for line in lines if line.split()[1] != ',']
     np.random.seed(10101)
     np.random.shuffle(lines)
     np.random.seed(None)

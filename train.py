@@ -32,7 +32,7 @@ def _main():
     else:
         model = create_model(input_shape, anchors, num_classes,
                              freeze_body=2,
-                             weights_path='logs/000/ep003-loss72.331-val_loss76.842.h5')  # make sure you know what you freeze
+                             weights_path='model_data/yolo_spines.h5')  # make sure you know what you freeze
 
     logging = TensorBoard(log_dir=log_dir)
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',

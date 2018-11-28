@@ -52,22 +52,20 @@ class SpineImageDataPreparer:
 
     def run(self):
         self.create_dataframe()
-        # self.load_all_data()
-        # self.translate_all_boxes_to_yolo()
-        self.dataframe = self.dataframe.apply(self.process_individual_row, axis=1)
-        # self.rescale_all_data()
-        # self.convert_all_images_to_float()
-        self.save_images_as_sliding_windows()
+        for count, (index, row) in enumerate(self.dataframe.iterrows()):
+            if (count % 500 == 0) & (count > 1):
+                print('Splitting image #{}/{}'.format(count, len(self.dataframe)))
+            image_dir = self.create_image_directory(count)
+            self.process_individual_row(row, image_dir)
+        self.write_dataframe_to_file()
+        print('Saving done yay')
 
-        # self.dataframe = self.dataframe.apply(self.rescale_row_of_data, axis=1)
-        # self.dataframe.images = self.dataframe.images.map(self.convert_image_to_float)
-
-    def process_individual_row(self, row):
+    def process_individual_row(self, row, image_dir):
         image_path = row.name
         self.load_image(image_path)
         self.rescale_row(row)
-        self.temp_loaded_image = self.convert_image_to_float(self.temp_loaded_image)
-        self.convert_to_sliding_windows(row)
+        # self.convert_image_to_float()
+        self.make_and_save_sliding_windows(row, image_dir)
 
     def rescale_row(self, row):
         scale = row.scale
@@ -83,7 +81,7 @@ class SpineImageDataPreparer:
     def run_on_single_image(self, image_file):
         self.dataframe = pd.DataFrame({'img_path': [image_file]})
         # self.load_all_data()
-        self.convert_all_images_to_float()
+        # self.convert_all_images_to_float()
         if self.do_sliding_windows:
             sliding_windows_x_shift = []
             sliding_windows_y_shift = []
@@ -184,13 +182,15 @@ class SpineImageDataPreparer:
     #         self.dataframe['boxes'] = self.dataframe['boxes'].map(self.boxes_to_yolo)
 
     def rescale_data(self, image, scale, boxes=None):
+        if isinstance(scale, str):
+            scale = float(scale)
         boxes_rescaled = None
         resize_scale = self.target_scale_px_per_um / scale
         new_shape = np.array(image.shape)
         new_shape[:2] = np.array(new_shape[:2] * resize_scale, dtype=np.int)
         if boxes is not None:
             boxes_rescaled = boxes[:, :4] * resize_scale
-        image_rescaled = transform.resize(image, new_shape)
+        image_rescaled = transform.resize(image, new_shape, preserve_range=True).astype(np.uint8)
         return image_rescaled, boxes_rescaled
 
     # def rescale_row_of_data(self, row):
@@ -209,13 +209,11 @@ class SpineImageDataPreparer:
     #     if self.resize_to_scale:
     #         self.dataframe = self.dataframe.apply(self.rescale_row_of_data, axis=1)
 
-    @staticmethod
-    def convert_image_to_float(image):
-        image_float = image.astype(np.float16) / np.max(image)
-        return image_float
+    def convert_image_to_float(self):
+        self.temp_loaded_image = self.temp_loaded_image.astype(np.float16) / np.max(self.temp_loaded_image)
 
-    def convert_all_images_to_float(self):
-        self.dataframe['images'] = self.dataframe['images'].map(self.convert_image_to_float)
+    # def convert_all_images_to_float(self):
+    #     self.dataframe['images'] = self.dataframe['images'].map(self.convert_image_to_float)
 
     def yield_sliding_windows(self, image, boxes=None):
         for y in range(0, image.shape[0], self.sliding_window_step):
@@ -237,9 +235,9 @@ class SpineImageDataPreparer:
                 yield (x, y, img_window, boxes_in_window)
 
     def save_images_as_sliding_windows(self):
-        self.output_file_list = []
+        # self.output_file_list = []
         for count, (index, row) in enumerate(self.dataframe.iterrows()):
-            if (count % 500 == 0) & (count > 1):
+            if (count % 100 == 0) & (count > 1):
                 print('Splitting image #{}/{}'.format(count, len(self.dataframe)))
             image_dir = self.create_image_directory(count)
             self.make_and_save_sliding_windows(row, image_dir)
@@ -253,12 +251,6 @@ class SpineImageDataPreparer:
             bounding_boxes = None
         for (x, y, window, boxes_in_window) in self.yield_sliding_windows(self.temp_loaded_image, bounding_boxes):
             self.save_sliding_window(image_dir, x, y, window, boxes_in_window)
-
-    # def save_images_and_data(self, row, path):
-    #     if self.labeled:
-    #         self.write_data(path, row['images'], row['boxes'])
-    #     else:
-    #         self.write_data(path, row['images'])
 
     def create_image_directory(self, count):
         image_dir = os.path.join(self.save_directory, 'image{}'.format(count))

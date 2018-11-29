@@ -53,7 +53,7 @@ class SpineImageDataPreparer:
     def run(self):
         self.create_dataframe()
         for count, (index, row) in enumerate(self.dataframe.iterrows()):
-            if (count % 500 == 0) & (count > 1):
+            if (count % 100 == 0) & (count > 1):
                 print('Splitting image #{}/{}'.format(count, len(self.dataframe)))
             image_dir = self.create_image_directory(count)
             self.process_individual_row(row, image_dir)
@@ -63,9 +63,15 @@ class SpineImageDataPreparer:
     def process_individual_row(self, row, image_dir):
         image_path = row.name
         self.load_image(image_path)
+        row.bounding_boxes = self.nan_to_none(row.bounding_boxes)
         self.rescale_row(row)
-        # self.convert_image_to_float()
         self.make_and_save_sliding_windows(row, image_dir)
+
+    @staticmethod
+    def nan_to_none(bounding_boxes):
+        if type(bounding_boxes) != np.ndarray:
+            bounding_boxes = None
+        return bounding_boxes
 
     def rescale_row(self, row):
         scale = row.scale
@@ -177,43 +183,20 @@ class SpineImageDataPreparer:
             yolo_boxes.append(box)
         return np.array(yolo_boxes)
 
-    # def translate_all_boxes_to_yolo(self):
-    #     if self.labeled:
-    #         self.dataframe['boxes'] = self.dataframe['boxes'].map(self.boxes_to_yolo)
-
     def rescale_data(self, image, scale, boxes=None):
         if isinstance(scale, str):
             scale = float(scale)
-        boxes_rescaled = None
+        boxes_rescaled = boxes
         resize_scale = self.target_scale_px_per_um / scale
         new_shape = np.array(image.shape)
         new_shape[:2] = np.array(new_shape[:2] * resize_scale, dtype=np.int)
         if boxes is not None:
-            boxes_rescaled = boxes[:, :4] * resize_scale
+            boxes_rescaled[:, :4] = boxes[:, :4] * resize_scale
         image_rescaled = transform.resize(image, new_shape, preserve_range=True).astype(np.uint8)
         return image_rescaled, boxes_rescaled
 
-    # def rescale_row_of_data(self, row):
-    #     if self.labeled:
-    #         image, boxes = self.rescale_data(row['images'],
-    #                                          scale=row['scale'],
-    #                                          boxes=row['boxes'])
-    #         row['boxes'] = boxes
-    #     else:
-    #         image, _ = self.rescale_data(row['images'],
-    #                                      scale=row['scale'])
-    #     row['images'] = image
-    #     return row
-
-    # def rescale_all_data(self):
-    #     if self.resize_to_scale:
-    #         self.dataframe = self.dataframe.apply(self.rescale_row_of_data, axis=1)
-
     def convert_image_to_float(self):
         self.temp_loaded_image = self.temp_loaded_image.astype(np.float16) / np.max(self.temp_loaded_image)
-
-    # def convert_all_images_to_float(self):
-    #     self.dataframe['images'] = self.dataframe['images'].map(self.convert_image_to_float)
 
     def yield_sliding_windows(self, image, boxes=None):
         for y in range(0, image.shape[0], self.sliding_window_step):
@@ -234,15 +217,14 @@ class SpineImageDataPreparer:
                 img_window = image[y:y + self.sliding_window_side, x:x + self.sliding_window_side]
                 yield (x, y, img_window, boxes_in_window)
 
-    def save_images_as_sliding_windows(self):
-        # self.output_file_list = []
-        for count, (index, row) in enumerate(self.dataframe.iterrows()):
-            if (count % 100 == 0) & (count > 1):
-                print('Splitting image #{}/{}'.format(count, len(self.dataframe)))
-            image_dir = self.create_image_directory(count)
-            self.make_and_save_sliding_windows(row, image_dir)
-        self.write_dataframe_to_file()
-        print('Saving done yay')
+    # def save_images_as_sliding_windows(self):
+    #     for count, (index, row) in enumerate(self.dataframe.iterrows()):
+    #         if (count % 100 == 0) & (count > 1):
+    #             print('Splitting image #{}/{}'.format(count, len(self.dataframe)))
+    #         image_dir = self.create_image_directory(count)
+    #         self.make_and_save_sliding_windows(row, image_dir)
+    #     self.write_dataframe_to_file()
+    #     print('Saving done yay')
 
     def make_and_save_sliding_windows(self, row, image_dir):
         if self.labeled:
@@ -266,24 +248,31 @@ class SpineImageDataPreparer:
         self.write_image(window_file_path, window)
 
     def write_dataframe_to_file(self):
-        self.dataframe_out.bounding_boxes.map(self.boxes_to_strings)
+        self.dataframe_out.bounding_boxes = self.dataframe_out.bounding_boxes.map(self.boxes_to_strings)
         df_train, df_validation = train_test_split(self.dataframe_out, test_size=1 - self.training_fraction)
         train_path = os.path.join(self.save_directory, 'train.txt')
         validation_path = os.path.join(self.save_directory, 'validation.txt')
         with open(train_path, 'w') as f:
-            for ind, row in self.dataframe.iterrows():
+            for ind, row in df_train.iterrows():
+                self.write_row_to_file(row, f)
+        with open(validation_path, 'w') as f:
+            for ind, row in df_validation.iterrows():
                 self.write_row_to_file(row, f)
 
     def write_row_to_file(self, row, f):
         f.write('{} '.format(row.name))
         for box in row.bounding_boxes:
-            f.write('{} ', box)
+            f.write('{} '.format(box))
         f.write('\n')
 
     @staticmethod
     def boxes_to_strings(bounding_boxes):
-        box_strings = ['{:.0f},{:.0f},{:.0f},{:.0f},{:.0f}'.format(box[0], box[1], box[2], box[3], box[4]) for box in
-                       bounding_boxes]
+        if type(bounding_boxes) == np.ndarray:
+            box_strings = ['{:.0f},{:.0f},{:.0f},{:.0f},{:.0f}'.format(box[0], box[1], box[2], box[3], box[4]) for box
+                           in bounding_boxes]
+        else:
+            box_strings = ''
+
         return box_strings
 
     def write_image(self, path, image):

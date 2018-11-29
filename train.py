@@ -14,8 +14,7 @@ from yolo3.utils import get_random_data
 
 
 def _main():
-    annotation_path = os.path.join('C:', 'Users', 'smirnovm', 'Documents', 'Data', 'yolov3_keras_spine_training',
-                                   'train.txt')
+    annotation_path = os.path.join('D:', 'yolo', 'keras-yolo3', 'data', 'sliding_window_images', 'train.txt')
     log_dir = 'logs/000/'
     classes_path = 'model_data/spine_classes.txt'
     anchors_path = 'model_data/yolo_anchors.txt'

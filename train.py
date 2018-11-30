@@ -14,7 +14,8 @@ from yolo3.utils import get_random_data
 
 
 def _main():
-    annotation_path = os.path.join('D:', 'yolo', 'keras-yolo3', 'data', 'sliding_window_images', 'train.txt')
+    annotation_path_train = os.path.join('data', 'sliding_window_images', 'train.txt')
+    annotation_path_validation = os.path.join('data', 'sliding_window_images', 'validation.txt')
     log_dir = 'logs/000/'
     classes_path = 'model_data/spine_classes.txt'
     anchors_path = 'model_data/yolo_anchors.txt'
@@ -39,20 +40,14 @@ def _main():
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1)
 
-    val_split = 0.2
-    with open(annotation_path) as f:
-        lines = f.readlines()
-    lines = [line for line in lines if len(line.strip()) > 0]
-    lines = [line for line in lines if line.split()[1] != ',']
-    np.random.seed(10101)
-    np.random.shuffle(lines)
-    np.random.seed(None)
-    num_val = int(len(lines) * val_split)
-    num_train = len(lines) - num_val
+    lines_train = get_lines_from_annotation_file(annotation_path_train)
+    lines_validation = get_lines_from_annotation_file(annotation_path_validation)
+    num_val = len(lines_validation)
+    num_train = len(lines_train)
 
     # Train with frozen layers first, to get a stable loss.
     # Adjust num epochs to your dataset. This step is enough to obtain a not bad model.
-    freeze_train = False
+    freeze_train = True
     if freeze_train:
         model.compile(optimizer=Adam(lr=1e-3), loss={
             # use custom yolo_loss Lambda layer.
@@ -60,9 +55,9 @@ def _main():
 
         batch_size = 32
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
-        model.fit_generator(data_generator_wrapper(lines[:num_train], batch_size, input_shape, anchors, num_classes),
+        model.fit_generator(data_generator_wrapper(lines_train, batch_size, input_shape, anchors, num_classes),
                             steps_per_epoch=max(1, num_train // batch_size),
-                            validation_data=data_generator_wrapper(lines[num_train:], batch_size, input_shape, anchors,
+                            validation_data=data_generator_wrapper(lines_validation, batch_size, input_shape, anchors,
                                                                    num_classes),
                             validation_steps=max(1, num_val // batch_size),
                             max_queue_size=4,
@@ -83,9 +78,9 @@ def _main():
 
         batch_size = 8  # note that more GPU memory is required after unfreezing the body
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
-        model.fit_generator(data_generator_wrapper(lines[:num_train], batch_size, input_shape, anchors, num_classes),
+        model.fit_generator(data_generator_wrapper(lines_train, batch_size, input_shape, anchors, num_classes),
                             steps_per_epoch=max(1, num_train // batch_size),
-                            validation_data=data_generator_wrapper(lines[num_train:], batch_size, input_shape, anchors,
+                            validation_data=data_generator_wrapper(lines_validation, batch_size, input_shape, anchors,
                                                                    num_classes),
                             validation_steps=max(1, num_val // batch_size),
                             epochs=100,
@@ -198,6 +193,15 @@ def data_generator_wrapper(annotation_lines, batch_size, input_shape, anchors, n
     n = len(annotation_lines)
     if n == 0 or batch_size <= 0: return None
     return data_generator(annotation_lines, batch_size, input_shape, anchors, num_classes)
+
+
+def get_lines_from_annotation_file(path):
+    with open(path) as f:
+        lines = f.readlines()
+    lines = [line for line in lines if len(line.strip()) > 0]
+    lines = [line for line in lines if len(line.split()) > 1]
+    lines = [line for line in lines if line.split()[1] != ',']
+    return lines
 
 
 if __name__ == '__main__':

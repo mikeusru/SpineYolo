@@ -161,12 +161,6 @@ class SpineImageDataPreparer:
         boxes = np.genfromtxt(bbox_file, delimiter=',')
         return boxes
 
-    # def load_all_data(self):
-    #     self.dataframe['images'] = self.dataframe.index.map(self.load_image)
-    #     if self.labeled:
-    #         self.dataframe['boxes'] = self.dataframe['bounding_boxes_path'].map(self.read_bounding_boxes)
-    #         self.dataframe['scale'] = self.dataframe['info_path'].map(self.read_scale)
-
     @staticmethod
     def boxes_to_yolo(boxes):
         # function to set box parameters as x_center, y_center, box_width, box_height, class
@@ -243,7 +237,7 @@ class SpineImageDataPreparer:
     def save_sliding_window(self, image_dir, x, y, window, boxes_in_window):
         window_file_path = os.path.join(image_dir, 'window_x_{}_y_{}_data.tiff'.format(x, y))
         row_out = pd.Series(dict(bounding_boxes=boxes_in_window, x=x, y=y, scale=self.target_scale_px_per_um)).rename(
-            image_dir)
+            window_file_path)
         self.dataframe_out = self.dataframe_out.append(row_out)
         self.write_image(window_file_path, window)
 
@@ -278,7 +272,3 @@ class SpineImageDataPreparer:
     def write_image(self, path, image):
         image_to_write = Image.fromarray(image)
         image_to_write.save(path)
-
-    # def save_file_list(self):
-    # self.output_file_list = np.array(self.output_file_list)
-    # np.savez(os.path.join(self.save_directory, 'file_list.npz'), file_list=self.output_file_list)

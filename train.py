@@ -32,7 +32,7 @@ def _main():
     else:
         model = create_model(input_shape, anchors, num_classes,
                              freeze_body=2,
-                             weights_path='model_data/yolo_spines.h5')  # make sure you know what you freeze
+                             weights_path='model_data/yolo_spines_scaled.h5')  # make sure you know what you freeze
 
     logging = TensorBoard(log_dir=log_dir)
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
@@ -47,7 +47,7 @@ def _main():
 
     # Train with frozen layers first, to get a stable loss.
     # Adjust num epochs to your dataset. This step is enough to obtain a not bad model.
-    freeze_train = True
+    freeze_train = False
     if freeze_train:
         model.compile(optimizer=Adam(lr=1e-3), loss={
             # use custom yolo_loss Lambda layer.

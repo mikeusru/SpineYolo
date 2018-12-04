@@ -211,15 +211,6 @@ class SpineImageDataPreparer:
                 img_window = image[y:y + self.sliding_window_side, x:x + self.sliding_window_side]
                 yield (x, y, img_window, boxes_in_window)
 
-    # def save_images_as_sliding_windows(self):
-    #     for count, (index, row) in enumerate(self.dataframe.iterrows()):
-    #         if (count % 100 == 0) & (count > 1):
-    #             print('Splitting image #{}/{}'.format(count, len(self.dataframe)))
-    #         image_dir = self.create_image_directory(count)
-    #         self.make_and_save_sliding_windows(row, image_dir)
-    #     self.write_dataframe_to_file()
-    #     print('Saving done yay')
-
     def make_and_save_sliding_windows(self, row, image_dir):
         if self.labeled:
             bounding_boxes = row.bounding_boxes

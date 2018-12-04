@@ -20,7 +20,6 @@ class SpineYoloGui(tk.Tk):
         self.training_data_path = tk.StringVar()
         self.trained_model_path = tk.StringVar()
         self.log_dir = tk.StringVar()
-        self.new_model_path = tk.StringVar()
         self.set_default_variables()
         self.gui = self.define_gui_elements()
 
@@ -28,7 +27,6 @@ class SpineYoloGui(tk.Tk):
         default_path = os.path.expanduser('~')
         self.training_data_path.set(os.path.join(default_path, 'training_data'))
         self.log_dir.set(os.path.join(default_path, 'logs'))
-        self.new_model_path.set(os.path.join(default_path, 'models'))
         self.trained_model_path.set(os.path.join(default_path, 'models', 'trained_model.h5'))
 
     def define_gui_elements(self):
@@ -40,7 +38,6 @@ class SpineYoloGui(tk.Tk):
                                                        font=NORMAL_FONT,
                                                        command=self.select_training_data)
         gui['select_training_data_button'].grid(row=0, column=2, sticky='nw', padx=10, pady=10)
-
 
         gui['prepare_training_data_button'] = tk.Button(self, text="Prepare",
                                                        font=LARGE_FONT,
@@ -92,11 +89,6 @@ class SpineYoloGui(tk.Tk):
                                title="Choose a pre-trained model")
         self.trained_model_path.set(path)
 
-    def select_folder_for_newly_trained_model(self):
-        path = askdirectory(initialdir=self.new_model_path.get(),
-                            title="Choose a directory for new model")
-        self.new_model_path.set(path)
-
     def set_training_log_dir(self):
         path = askdirectory(initialdir=self.log_dir.get(),
                                  title="Choose log file directory")
@@ -109,15 +101,13 @@ class SpineYoloGui(tk.Tk):
         pass
 
     def train(self):
-        self.select_folder_for_newly_trained_model()
         self.set_training_log_dir()
         self.spine_yolo.toggle_training(True)
-        self.spine_yolo.set_starting_weights(self.trained_model_path.get())
+        self.spine_yolo.set_starting_model_path(self.trained_model_path.get())
         self.spine_yolo.set_classes()
         self.spine_yolo.set_anchors()
         self.spine_yolo.set_partition(train_validation_split=.9, ratio_of_training_data_to_use=1)
         self.spine_yolo.set_log_dir(self.log_dir.get())
-        self.spine_yolo.set_model_save_path(self.new_model_path.get())
         self.spine_yolo.run()
 
 

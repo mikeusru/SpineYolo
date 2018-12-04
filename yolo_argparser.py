@@ -6,31 +6,25 @@ import os
 class YoloArgparse(argparse.ArgumentParser):
     def __init__(self):
         super(YoloArgparse, self).__init__(
-            description="Retrain or 'fine-tune' a pretrained YOLOv2 model for your own data.")
+            description="Retrain or 'fine-tune' a pretrained YOLOv3 model for your own data.")
 
         self.add_argument(
             '-d',
-            '--data_path',
-            help="path to numpy data file (.npz) list of all npz file paths in 'file_list' which have 'image' and 'boxes'",
-            default=os.path.join('..', 'DATA', 'underwater_data.npz'))
+            '--train_data_path',
+            help="path to training data",
+            default=os.path.join('data', 'sliding_window_images', 'train.txt'))
 
         self.add_argument(
-            '-t',
-            '--train',
-            help="set training to (default) 'on' or 'off'",
-            default='on')
+            '-d',
+            '--val_data_path',
+            help="path to training data",
+            default=os.path.join('data', 'sliding_window_images', 'validation.txt'))
 
         self.add_argument(
             '-s',
-            '--starting_weights',
+            '--starting_model_path',
             help="path for starting weights",
-            default=os.path.join('model_data', 'yolo.h5'))
-
-        self.add_argument(
-            '-f',
-            '--from_scratch',
-            help="don't load starting weights (on/off)",
-            default='on')
+            default=os.path.join('model_data', 'yolo_spines_scaled.h5'))
 
         self.add_argument(
             '-a',
@@ -39,13 +33,7 @@ class YoloArgparse(argparse.ArgumentParser):
             default=os.path.join('model_data', 'yolo_anchors.txt'))
 
         self.add_argument(
-            '-o',
-            '--overfit_single_image',
-            help='test script on single image',
-            default='off')
-
-        self.add_argument(
             '-c',
             '--classes_path',
-            help='path to classes file, defaults to pascal_classes.txt',
+            help='path to classes file, defaults to spine_classes.txt',
             default=os.path.join('model_data', 'spine_classes.txt'))

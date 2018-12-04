@@ -1,5 +1,5 @@
 """
-Retrain the YOLO model for your own dataset.
+Retrain the YOLOv3 model for your own dataset.
 """
 import os
 import numpy as np
@@ -13,12 +13,17 @@ from yolo3.model import preprocess_true_boxes, yolo_body, tiny_yolo_body, yolo_l
 from yolo3.utils import get_random_data
 
 
-def _main():
-    annotation_path_train = os.path.join('data', 'sliding_window_images', 'train.txt')
-    annotation_path_validation = os.path.join('data', 'sliding_window_images', 'validation.txt')
-    log_dir = 'logs/000/'
-    classes_path = 'model_data/spine_classes.txt'
-    anchors_path = 'model_data/yolo_anchors.txt'
+def _main(annotation_path_train=None, annotation_path_validation=None, log_dir=None, classes_path=None, anchors_path=None):
+    if annotation_path_train is None:
+        annotation_path_train = os.path.join('data', 'sliding_window_images', 'train.txt')
+    if annotation_path_validation is None:
+        annotation_path_validation = os.path.join('data', 'sliding_window_images', 'validation.txt')
+    if log_dir is None:
+        log_dir = 'logs/000/'
+    if classes_path is None:
+        classes_path = 'model_data/spine_classes.txt'
+    if anchors_path is None:
+        anchors_path = 'model_data/yolo_anchors.txt'
     class_names = get_classes(classes_path)
     num_classes = len(class_names)
     anchors = get_anchors(anchors_path)
@@ -206,3 +211,7 @@ def get_lines_from_annotation_file(path):
 
 if __name__ == '__main__':
     _main()
+
+
+def train_spine_yolo(train_path, val_path, log_dir, classes_path, anchors_path):
+    _main(train_path, val_path, log_dir, classes_path, anchors_path)

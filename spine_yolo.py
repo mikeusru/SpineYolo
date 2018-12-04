@@ -3,6 +3,7 @@ This is a class for training and evaluating yadk2
 """
 import os
 
+import colorsys
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
@@ -11,13 +12,14 @@ from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping, ReduceL
 from keras.layers import Input, Lambda
 from keras.models import load_model, Model
 from keras.optimizers import Adam
+from keras.utils import multi_gpu_model
 
 from data_generator import DataGenerator
 from spine_preprocessing.collect_spine_data import SpineImageDataPreparer
 from spine_preprocessing.spine_preprocessing import process_data
 from yolo3.draw_boxes import draw_boxes
-from yolo3.model import (yolo_body,
-                         yolo_eval, yolo_loss)
+from yolo3.model import (yolo_body, yolo_eval, tiny_yolo_body)
+from yolo3.utils import letterbox_image
 from yolo_argparser import YoloArgparse
 
 argparser = YoloArgparse()
@@ -27,14 +29,6 @@ YOLO_ANCHORS = np.array(
     ((0.57273, 0.677385), (1.87446, 2.06253), (3.33843, 5.47434),
      (7.88282, 3.52778), (9.77052, 9.16828)))
 
-MODEL_FILES = {1: 'trained_stage_1',
-               2: 'trained_stage_2',
-               3: 'trained_stage_3',
-               'best': 'trained_stage_3_best',
-               'latest': 'trained_latest',
-               'testing': 'yolo_spine_model_testing',
-               'final': 'trained_final'}
-
 IMAGE_INPUT = Input(shape=(416, 416, 3))
 BOXES_INPUT = Input(shape=(None, 5))
 
@@ -42,131 +36,99 @@ BOXES_INPUT = Input(shape=(None, 5))
 class SpineYolo(object):
 
     def __init__(self, _args):
-        self.data_path = os.path.expanduser(_args.data_path)
+        self.train_data_path = os.path.expanduser(_args.train_data_path)
+        self.validation_data_path = os.path.expanduser(_args.val_data_path)
         self.classes_path = os.path.expanduser(_args.classes_path)
         self.anchors_path = os.path.expanduser(_args.anchors_path)
-        self.starting_weights = os.path.expanduser(_args.starting_weights)
-        self.from_scratch = _args.from_scratch == 'on'
-        self.training_on = _args.train == 'on'
-        self.overfit_single_image = _args.overfit_single_image == 'on'
-        self.file_list = None
-        self.log_dir = None
-        self.class_names = None
-        self.anchors = None
-        self.partition = None
-        self.model_save_path = ''
-        self.trained_model_path = '../test'
-        self.detectors_mask_shape = (13, 13, 5, 1)
-        self.matching_boxes_shape = (13, 13, 5, 5)
+        self.starting_model_path = os.path.expanduser(_args.starting_model_path)
+        self.log_dir = os.path.join('logs/000')
+        self.class_names = self._get_classes()
+        self.anchors = self._get_anchors()
         self.model_body = None
         self.model = None
         self.input_shape = (416, 416)
         self.input_image_shape = None
+        self.gpu_num = 1
+        self.score = 0.5
+        self.iou = 0.45
+        self.sess = K.get_session()
+        self.boxes, self.scores, self.classes = self.generate()
 
     def set_log_dir(self, log_dir):
         self.log_dir = log_dir
 
-    def get_model_file(self, stage):
-        model_file = MODEL_FILES[stage] + '.h5'
-        if not os.path.exists(self.model_save_path):
-            os.makedirs(self.model_save_path)
-        file = os.path.join(self.model_save_path, model_file)
-        return file
-
     def set_data_path(self, data_path=None):
-        self.data_path = os.path.expanduser(data_path)
-        self.file_list = np.load(self.data_path)['file_list']
+        self.data_path = data_path
 
-    def set_starting_weights(self, path):
-        self.starting_weights = path
+    def set_starting_model_path(self, path):
+        self.starting_model_path = path
 
-    def set_trained_model_path(self, path):
-        self.trained_model_path = path
+    def generate(self):
+        model_path = os.path.expanduser(self.starting_model_path)
+        assert model_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'
 
-    def set_model_save_path(self, path):
-        self.model_save_path = path
-
-    def toggle_training(self, do_training):
-        self.training_on = do_training
-
-    def run_on_single_image(self, image_file):
-        self.load_yolo_model()
-        spine_data_preparer = SpineImageDataPreparer()
-        spine_data_preparer.set_labeled_state(False)
-        spine_data_preparer.set_sliding_window_props(False)
-        image = spine_data_preparer.run_on_single_image(image_file)
-        image = [image]
-        image_data = self.reshape_image_data_for_eval(image)
-        boxes, scores, classes, input_image_shape = self.create_yolo_output_variables()
-        sess = K.get_session()
-        out_boxes, out_scores, out_classes = sess.run(
-            [boxes, scores, classes],
-            feed_dict={
-                self.model_body.input: image_data[0],
-                input_image_shape: [image_data.shape[2], image_data.shape[3]],
-                K.learning_phase(): 0
-            })
-        image_with_boxes = draw_boxes(image_data[0][0], out_boxes, out_classes,
-                                      self.class_names, out_scores)
-        plt.figure()
-        plt.imshow(image_with_boxes)
-        plt.show()
-        print(out_boxes)
-        print(out_scores)
-        print(out_classes)
-
-    # TODO: Run this before doing draw
-    def load_yolo_model(self):
-        self.model = load_model(self.trained_model_path, compile=False)
-
-    def run(self):
-        if self.training_on:
-            self.train()
-            self.draw(image_set='validation',  # assumes training/validation split is 0.9
-                      save_all=False)
+        # Load model, or construct model and load weights.
+        num_anchors = len(self.anchors)
+        num_classes = len(self.class_names)
+        is_tiny_version = num_anchors == 6  # default setting
+        try:
+            self.yolo_model = load_model(model_path, compile=False)
+        except:
+            self.yolo_model = tiny_yolo_body(Input(shape=(None, None, 3)), num_anchors // 2, num_classes) \
+                if is_tiny_version else yolo_body(Input(shape=(None, None, 3)), num_anchors // 3, num_classes)
+            self.yolo_model.load_weights(self.starting_model_path)  # make sure model, anchors and classes match
         else:
-            self.draw(image_set='validation',
-                      save_all=True)
+            assert self.yolo_model.layers[-1].output_shape[-1] == \
+                   num_anchors / len(self.yolo_model.output) * (num_classes + 5), \
+                'Mismatch between model and given anchor and class sizes'
+
+        print('{} model, anchors, and classes loaded.'.format(model_path))
+
+        # Generate colors for drawing bounding boxes.
+        hsv_tuples = [(x / len(self.class_names), 1., 1.)
+                      for x in range(len(self.class_names))]
+        self.colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
+        self.colors = list(
+            map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)),
+                self.colors))
+        np.random.seed(10101)  # Fixed seed for consistent colors across runs.
+        np.random.shuffle(self.colors)  # Shuffle colors to decorrelate adjacent classes.
+        np.random.seed(None)  # Reset seed to default.
+
+        # Generate output tensor targets for filtered bounding boxes.
+        self.input_image_shape = K.placeholder(shape=(2,))
+        if self.gpu_num >= 2:
+            self.yolo_model = multi_gpu_model(self.yolo_model, gpus=self.gpu_num)
+        boxes, scores, classes = yolo_eval(self.yolo_model.output, self.anchors,
+                                           len(self.class_names), self.input_image_shape,
+                                           score_threshold=self.score, iou_threshold=self.iou)
+        return boxes, scores, classes
+
+    def load_yolo_model(self):
+        self.model = load_model(self.starting_model_path, compile=False)
 
     def prepare_image_data(self, images_path, is_labeled=False):
         spine_data_preparer = SpineImageDataPreparer()
-        spine_data_preparer.set_labeled_state(is_labeled)
-        spine_data_preparer.set_initial_directory(images_path)
-        spine_data_preparer.set_save_directory()
         spine_data_preparer.run()
-        self.file_list = spine_data_preparer.output_file_list
 
-    def set_dummy_partition(self):
-        self.set_partition(train_validation_split=0)
-
-    def set_partition(self, train_validation_split=0.9, ratio_of_training_data_to_use=1):
-        data_len = self.file_list.size
-        train_array = np.array(range(int(train_validation_split * data_len * ratio_of_training_data_to_use)))
-        validation_array = np.array(range(int(train_validation_split * data_len), data_len))
-        np.random.seed(10101)
-        np.random.shuffle(self.file_list)
-        np.random.seed(None)
-        partition = dict(train=train_array,
-                         validation=validation_array)
-        self.partition = partition
-
-    def set_classes(self):
+    def _get_classes(self):
         """loads the classes"""
         with open(self.classes_path) as f:
             class_names = f.readlines()
         class_names = [c.strip() for c in class_names]
-        self.class_names = class_names
+        return class_names
 
-    def set_anchors(self):
+    def _get_anchors(self):
         """loads the anchors from a file"""
         if os.path.isfile(self.anchors_path):
             with open(self.anchors_path) as f:
                 anchors = f.readline()
                 anchors = [float(x) for x in anchors.split(',')]
-                self.anchors = np.array(anchors).reshape(-1, 2)
+                anchors = np.array(anchors).reshape(-1, 2)
         else:
             Warning("Could not open anchors file, using default.")
-            self.anchors = YOLO_ANCHORS
+            anchors = YOLO_ANCHORS
+        return anchors
 
     def create_model(self, load_pretrained=True, freeze_body=2,
                      weights_path='model_data/yolo.h5'):
@@ -216,7 +178,7 @@ class SpineYolo(object):
 
         early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=15, verbose=1, mode='auto')
 
-        first_round_weights = self.starting_weights
+        first_round_weights = self.starting_model_path
         self.create_model(freeze_body=2, weights_path=first_round_weights)
         self.model.compile(
             optimizer=Adam(lr=1e-3), loss={
@@ -270,13 +232,8 @@ class SpineYolo(object):
         self.draw(image_set='validation', out_path="output_images_stage_2", save_all=False)
 
     def make_data_generators(self, params):
-        if self.overfit_single_image:
-            params['batch_size'] = 1
-            partition_train = self.partition['train'][[0, 0]]
-            partition_validation = self.partition['train'][[0, 0]]
-        else:
-            partition_train = self.partition['train']
-            partition_validation = self.partition['validation']
+        partition_train = self.partition['train']
+        partition_validation = self.partition['validation']
         training_generator = DataGenerator(partition_train,
                                            anchors=self.anchors,
                                            file_list=self.file_list,

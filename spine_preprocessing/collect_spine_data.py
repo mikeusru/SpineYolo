@@ -119,13 +119,14 @@ class SpineImageDataPreparer:
         for line in lines:
             bounding_boxes = line.split()[1:]
             bounding_boxes = np.array([np.array(box.split(',')).astype(int) for box in bounding_boxes])
-            self.initial_image_file_dict[line.split()[0]]['bounding_boxes'] = bounding_boxes
-            self.initial_image_file_dict[line.split()[0]]['train_or_validation'] = train_or_validation
+            image_path = os.path.join(self.initial_directory, line.split()[0])
+            self.initial_image_file_dict[image_path]['bounding_boxes'] = bounding_boxes
+            self.initial_image_file_dict[image_path]['train_or_validation'] = train_or_validation
 
     def create_image_file_dict(self, lines):
         file_dict = dict()
         for line in lines:
-            image_path = line.split()[0]
+            image_path = os.path.join(self.initial_directory, line.split()[0])
             image_info = line.split()[1:]
             info_dict = dict()
             for key, val in zip(image_info[0::2], image_info[1::2]):

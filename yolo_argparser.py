@@ -9,13 +9,13 @@ class YoloArgparse(argparse.ArgumentParser):
             description="Retrain or 'fine-tune' a pretrained YOLOv3 model for your own data.")
 
         self.add_argument(
-            '-d',
+            '-t',
             '--train_data_path',
             help="path to training data",
             default=os.path.join('data', 'sliding_window_images', 'train.txt'))
 
         self.add_argument(
-            '-d',
+            '-v',
             '--val_data_path',
             help="path to training data",
             default=os.path.join('data', 'sliding_window_images', 'validation.txt'))

@@ -21,8 +21,9 @@ from yolo3.draw_boxes import draw_boxes
 from yolo3.model import (yolo_body, yolo_eval, tiny_yolo_body)
 from yolo3.utils import letterbox_image
 from yolo_argparser import YoloArgparse
+from yolo import YOLO
+from train import train_spine_yolo
 
-argparser = YoloArgparse()
 
 # Default anchor boxes
 YOLO_ANCHORS = np.array(
@@ -44,15 +45,31 @@ class SpineYolo(object):
         self.log_dir = os.path.join('logs/000')
         self.class_names = self._get_classes()
         self.anchors = self._get_anchors()
-        self.model_body = None
-        self.model = None
         self.input_shape = (416, 416)
-        self.input_image_shape = None
         self.gpu_num = 1
         self.score = 0.5
         self.iou = 0.45
-        self.sess = K.get_session()
-        self.boxes, self.scores, self.classes = self.generate()
+        self.yolo_detector = None
+
+    def detect_input_images(self):
+        while True:
+            img = input('Input image filename:')
+            try:
+                image = Image.open(img)
+            except:
+                print('Open Error! Try again!')
+                continue
+            else:
+                r_image = self.yolo_detector.detect_image(image)
+                r_image.show()
+        self.yolo_detector.close_session()
+
+    def detect(self):
+        self.yolo_detector = YOLO()
+        self.detect_input_images()
+
+    def train_yolo(self):
+        train_spine_yolo(self.train_data_path, self.validation_data_path, self.log_dir, self.classes_path, self.anchors_path)
 
     def set_log_dir(self, log_dir):
         self.log_dir = log_dir
@@ -62,47 +79,6 @@ class SpineYolo(object):
 
     def set_starting_model_path(self, path):
         self.starting_model_path = path
-
-    def generate(self):
-        model_path = os.path.expanduser(self.starting_model_path)
-        assert model_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'
-
-        # Load model, or construct model and load weights.
-        num_anchors = len(self.anchors)
-        num_classes = len(self.class_names)
-        is_tiny_version = num_anchors == 6  # default setting
-        try:
-            self.yolo_model = load_model(model_path, compile=False)
-        except:
-            self.yolo_model = tiny_yolo_body(Input(shape=(None, None, 3)), num_anchors // 2, num_classes) \
-                if is_tiny_version else yolo_body(Input(shape=(None, None, 3)), num_anchors // 3, num_classes)
-            self.yolo_model.load_weights(self.starting_model_path)  # make sure model, anchors and classes match
-        else:
-            assert self.yolo_model.layers[-1].output_shape[-1] == \
-                   num_anchors / len(self.yolo_model.output) * (num_classes + 5), \
-                'Mismatch between model and given anchor and class sizes'
-
-        print('{} model, anchors, and classes loaded.'.format(model_path))
-
-        # Generate colors for drawing bounding boxes.
-        hsv_tuples = [(x / len(self.class_names), 1., 1.)
-                      for x in range(len(self.class_names))]
-        self.colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
-        self.colors = list(
-            map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)),
-                self.colors))
-        np.random.seed(10101)  # Fixed seed for consistent colors across runs.
-        np.random.shuffle(self.colors)  # Shuffle colors to decorrelate adjacent classes.
-        np.random.seed(None)  # Reset seed to default.
-
-        # Generate output tensor targets for filtered bounding boxes.
-        self.input_image_shape = K.placeholder(shape=(2,))
-        if self.gpu_num >= 2:
-            self.yolo_model = multi_gpu_model(self.yolo_model, gpus=self.gpu_num)
-        boxes, scores, classes = yolo_eval(self.yolo_model.output, self.anchors,
-                                           len(self.class_names), self.input_image_shape,
-                                           score_threshold=self.score, iou_threshold=self.iou)
-        return boxes, scores, classes
 
     def load_yolo_model(self):
         self.model = load_model(self.starting_model_path, compile=False)
@@ -129,37 +105,6 @@ class SpineYolo(object):
             Warning("Could not open anchors file, using default.")
             anchors = YOLO_ANCHORS
         return anchors
-
-    def create_model(self, load_pretrained=True, freeze_body=2,
-                     weights_path='model_data/yolo.h5'):
-        """create the training model"""
-        K.clear_session()  # get a new session
-        image_input = Input(shape=(None, None, 3))
-        h, w = self.input_shape
-        num_anchors = len(self.anchors)
-        num_classes = len(self.class_names)
-
-        y_true = [Input(shape=(h // {0: 32, 1: 16, 2: 8}[l], w // {0: 32, 1: 16, 2: 8}[l],
-                               num_anchors // 3, num_classes + 5)) for l in range(3)]
-
-        model_body = yolo_body(image_input, num_anchors // 3, num_classes)
-        print('Create YOLOv3 model with {} anchors and {} classes.'.format(num_anchors, num_classes))
-
-        if load_pretrained:
-            model_body.load_weights(weights_path, by_name=True, skip_mismatch=True)
-            print('Load weights {}.'.format(weights_path))
-            if freeze_body in [1, 2]:
-                # Freeze darknet53 body or freeze all but 3 output layers.
-                num = (185, len(model_body.layers) - 3)[freeze_body - 1]
-                for i in range(num):
-                    model_body.layers[i].trainable = False
-                print('Freeze the first {} layers of total {} layers.'.format(num, len(model_body.layers)))
-
-        model_loss = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
-                            arguments={'anchors': self.anchors, 'num_classes': num_classes, 'ignore_thresh': 0.5})(
-            [*model_body.output, *y_true])
-        model = Model([model_body.input, *y_true], model_loss)
-        self.model = model
 
     def train(self):
         """
@@ -303,5 +248,6 @@ class SpineYolo(object):
 
 
 if __name__ == '__main__':
+    argparser = YoloArgparse()
     args = argparser.parse_args()
     app = SpineYolo(args)

@@ -81,7 +81,6 @@ class SpineYoloGui(tk.Tk):
         self.training_data_path.set(path)
 
     def prepare_training_data(self):
-        self.spine_yolo.toggle_training(True)
         self.spine_yolo.prepare_image_data(self.training_data_path.get(), is_labeled=True)
 
     def select_model(self):
@@ -102,11 +101,7 @@ class SpineYoloGui(tk.Tk):
 
     def train(self):
         self.set_training_log_dir()
-        self.spine_yolo.toggle_training(True)
         self.spine_yolo.set_starting_model_path(self.trained_model_path.get())
-        self.spine_yolo.set_classes()
-        self.spine_yolo.set_anchors()
-        self.spine_yolo.set_partition(train_validation_split=.9, ratio_of_training_data_to_use=1)
         self.spine_yolo.set_log_dir(self.log_dir.get())
         self.spine_yolo.run()
 

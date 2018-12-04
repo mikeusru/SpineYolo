@@ -13,11 +13,14 @@ from yolo3.model import preprocess_true_boxes, yolo_body, tiny_yolo_body, yolo_l
 from yolo3.utils import get_random_data
 
 
-def _main(annotation_path_train=None, annotation_path_validation=None, log_dir=None, classes_path=None, anchors_path=None):
-    if annotation_path_train is None:
+def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
+          classes_path=None, anchors_path=None, model_path=None):
+    if parsed_training_data is None:
         annotation_path_train = os.path.join('data', 'sliding_window_images', 'train.txt')
-    if annotation_path_validation is None:
+        parsed_training_data = get_lines_from_annotation_file(annotation_path_train)
+    if parsed_validation_data is None:
         annotation_path_validation = os.path.join('data', 'sliding_window_images', 'validation.txt')
+        parsed_validation_data = get_lines_from_annotation_file(annotation_path_validation)
     if log_dir is None:
         log_dir = 'logs/000/'
     if classes_path is None:
@@ -31,13 +34,14 @@ def _main(annotation_path_train=None, annotation_path_validation=None, log_dir=N
     input_shape = (416, 416)  # multiple of 32, hw
 
     is_tiny_version = len(anchors) == 6  # default setting
-    if is_tiny_version:
-        model = create_tiny_model(input_shape, anchors, num_classes,
-                                  freeze_body=2, weights_path='model_data/tiny_yolo_weights.h5')
-    else:
-        model = create_model(input_shape, anchors, num_classes,
-                             freeze_body=2,
-                             weights_path='model_data/yolo_spines_scaled.h5')  # make sure you know what you freeze
+    if model_path is None:
+        if is_tiny_version:
+            model_path = 'model_data/tiny_yolo_weights.h5'
+        else:
+            model_path = 'model_data/yolo_spines_scaled.h5'
+    model = create_model(input_shape, anchors, num_classes,
+                         freeze_body=2,
+                         weights_path=model_path)  # make sure you know what you freeze
 
     logging = TensorBoard(log_dir=log_dir)
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
@@ -45,14 +49,12 @@ def _main(annotation_path_train=None, annotation_path_validation=None, log_dir=N
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1)
 
-    lines_train = get_lines_from_annotation_file(annotation_path_train)
-    lines_validation = get_lines_from_annotation_file(annotation_path_validation)
-    num_val = len(lines_validation)
-    num_train = len(lines_train)
+    num_val = len(parsed_validation_data)
+    num_train = len(parsed_training_data)
 
     # Train with frozen layers first, to get a stable loss.
     # Adjust num epochs to your dataset. This step is enough to obtain a not bad model.
-    freeze_train = False
+    freeze_train = True
     if freeze_train:
         model.compile(optimizer=Adam(lr=1e-3), loss={
             # use custom yolo_loss Lambda layer.
@@ -60,16 +62,17 @@ def _main(annotation_path_train=None, annotation_path_validation=None, log_dir=N
 
         batch_size = 32
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
-        model.fit_generator(data_generator_wrapper(lines_train, batch_size, input_shape, anchors, num_classes),
+        model.fit_generator(data_generator_wrapper(parsed_training_data, batch_size, input_shape, anchors, num_classes),
                             steps_per_epoch=max(1, num_train // batch_size),
-                            validation_data=data_generator_wrapper(lines_validation, batch_size, input_shape, anchors,
+                            validation_data=data_generator_wrapper(parsed_validation_data, batch_size, input_shape,
+                                                                   anchors,
                                                                    num_classes),
                             validation_steps=max(1, num_val // batch_size),
                             max_queue_size=4,
                             workers=4,
                             epochs=50,
                             initial_epoch=0,
-                            callbacks=[logging, checkpoint])
+                            callbacks=[logging, checkpoint, early_stopping])
         model.save_weights(log_dir + 'trained_weights_stage_1.h5')
 
     # Unfreeze and continue training, to fine-tune.
@@ -83,9 +86,10 @@ def _main(annotation_path_train=None, annotation_path_validation=None, log_dir=N
 
         batch_size = 8  # note that more GPU memory is required after unfreezing the body
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
-        model.fit_generator(data_generator_wrapper(lines_train, batch_size, input_shape, anchors, num_classes),
+        model.fit_generator(data_generator_wrapper(parsed_training_data, batch_size, input_shape, anchors, num_classes),
                             steps_per_epoch=max(1, num_train // batch_size),
-                            validation_data=data_generator_wrapper(lines_validation, batch_size, input_shape, anchors,
+                            validation_data=data_generator_wrapper(parsed_validation_data, batch_size, input_shape,
+                                                                   anchors,
                                                                    num_classes),
                             validation_steps=max(1, num_val // batch_size),
                             epochs=100,
@@ -97,7 +101,7 @@ def _main(annotation_path_train=None, annotation_path_validation=None, log_dir=N
 
 
 def get_classes(classes_path):
-    '''loads the classes'''
+    """loads the classes"""
     with open(classes_path) as f:
         class_names = f.readlines()
     class_names = [c.strip() for c in class_names]
@@ -105,7 +109,7 @@ def get_classes(classes_path):
 
 
 def get_anchors(anchors_path):
-    '''loads the anchors from a file'''
+    """loads the anchors from a file"""
     with open(anchors_path) as f:
         anchors = f.readline()
     anchors = [float(x) for x in anchors.split(',')]
@@ -114,13 +118,13 @@ def get_anchors(anchors_path):
 
 def create_model(input_shape, anchors, num_classes, load_pretrained=True, freeze_body=2,
                  weights_path='model_data/yolo_weights.h5'):
-    '''create the training model'''
+    """create the training model"""
     K.clear_session()  # get a new session
     image_input = Input(shape=(None, None, 3))
     h, w = input_shape
     num_anchors = len(anchors)
 
-    y_true = [Input(shape=(h // {0: 32, 1: 16, 2: 8}[l], w // {0: 32, 1: 16, 2: 8}[l], \
+    y_true = [Input(shape=(h // {0: 32, 1: 16, 2: 8}[l], w // {0: 32, 1: 16, 2: 8}[l],
                            num_anchors // 3, num_classes + 5)) for l in range(3)]
 
     model_body = yolo_body(image_input, num_anchors // 3, num_classes)
@@ -132,7 +136,8 @@ def create_model(input_shape, anchors, num_classes, load_pretrained=True, freeze
         if freeze_body in [1, 2]:
             # Freeze darknet53 body or freeze all but 3 output layers.
             num = (185, len(model_body.layers) - 3)[freeze_body - 1]
-            for i in range(num): model_body.layers[i].trainable = False
+            for i in range(num):
+                model_body.layers[i].trainable = False
             print('Freeze the first {} layers of total {} layers.'.format(num, len(model_body.layers)))
 
     model_loss = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
@@ -145,13 +150,13 @@ def create_model(input_shape, anchors, num_classes, load_pretrained=True, freeze
 
 def create_tiny_model(input_shape, anchors, num_classes, load_pretrained=True, freeze_body=2,
                       weights_path='model_data/tiny_yolo_weights.h5'):
-    '''create the training model, for Tiny YOLOv3'''
+    """create the training model, for Tiny YOLOv3"""
     K.clear_session()  # get a new session
     image_input = Input(shape=(None, None, 3))
     h, w = input_shape
     num_anchors = len(anchors)
 
-    y_true = [Input(shape=(h // {0: 32, 1: 16}[l], w // {0: 32, 1: 16}[l], \
+    y_true = [Input(shape=(h // {0: 32, 1: 16}[l], w // {0: 32, 1: 16}[l],
                            num_anchors // 2, num_classes + 5)) for l in range(2)]
 
     model_body = tiny_yolo_body(image_input, num_anchors // 2, num_classes)
@@ -163,7 +168,8 @@ def create_tiny_model(input_shape, anchors, num_classes, load_pretrained=True, f
         if freeze_body in [1, 2]:
             # Freeze the darknet body or freeze all but 2 output layers.
             num = (20, len(model_body.layers) - 2)[freeze_body - 1]
-            for i in range(num): model_body.layers[i].trainable = False
+            for i in range(num):
+                model_body.layers[i].trainable = False
             print('Freeze the first {} layers of total {} layers.'.format(num, len(model_body.layers)))
 
     model_loss = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
@@ -175,7 +181,7 @@ def create_tiny_model(input_shape, anchors, num_classes, load_pretrained=True, f
 
 
 def data_generator(annotation_lines, batch_size, input_shape, anchors, num_classes):
-    '''data generator for fit_generator'''
+    """data generator for fit_generator"""
     n = len(annotation_lines)
     i = 0
     while True:
@@ -196,7 +202,8 @@ def data_generator(annotation_lines, batch_size, input_shape, anchors, num_class
 
 def data_generator_wrapper(annotation_lines, batch_size, input_shape, anchors, num_classes):
     n = len(annotation_lines)
-    if n == 0 or batch_size <= 0: return None
+    if n == 0 or batch_size <= 0:
+        return None
     return data_generator(annotation_lines, batch_size, input_shape, anchors, num_classes)
 
 
@@ -213,5 +220,5 @@ if __name__ == '__main__':
     _main()
 
 
-def train_spine_yolo(train_path, val_path, log_dir, classes_path, anchors_path):
-    _main(train_path, val_path, log_dir, classes_path, anchors_path)
+def train_spine_yolo(train_path, val_path, log_dir, classes_path, anchors_path, model_path):
+    _main(train_path, val_path, log_dir, classes_path, anchors_path, model_path)

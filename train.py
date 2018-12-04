@@ -70,7 +70,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
                             validation_steps=max(1, num_val // batch_size),
                             max_queue_size=4,
                             workers=4,
-                            epochs=50,
+                            epochs=10,
                             initial_epoch=0,
                             callbacks=[logging, checkpoint, early_stopping])
         model.save_weights(log_dir + 'trained_weights_stage_1.h5')
@@ -92,8 +92,8 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
                                                                    anchors,
                                                                    num_classes),
                             validation_steps=max(1, num_val // batch_size),
-                            epochs=100,
-                            initial_epoch=50,
+                            epochs=60,
+                            initial_epoch=10,
                             callbacks=[logging, checkpoint, reduce_lr, early_stopping])
         model.save_weights(log_dir + 'trained_weights_final.h5')
 

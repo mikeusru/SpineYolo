@@ -264,3 +264,8 @@ class SpineImageDataPreparer:
     def write_image(self, path, image):
         image_to_write = Image.fromarray(image)
         image_to_write.save(path)
+
+
+if __name__ == '__main__':
+    app = SpineImageDataPreparer()
+    app.run()

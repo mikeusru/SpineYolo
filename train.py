@@ -10,7 +10,7 @@ from keras.optimizers import Adam
 from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
 
 from yolo3.model import preprocess_true_boxes, yolo_body, tiny_yolo_body, yolo_loss
-from yolo3.utils import get_random_data
+from yolo3.utils import get_random_data, do_data_augmentation
 
 
 def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
@@ -54,13 +54,13 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
 
     # Train with frozen layers first, to get a stable loss.
     # Adjust num epochs to your dataset. This step is enough to obtain a not bad model.
-    freeze_train = False
+    freeze_train = True
     if freeze_train:
         model.compile(optimizer=Adam(lr=1e-3), loss={
             # use custom yolo_loss Lambda layer.
             'yolo_loss': lambda y_true, y_pred: y_pred})
 
-        batch_size = 8
+        batch_size = 16
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
         model.fit_generator(data_generator_wrapper(parsed_training_data, batch_size, input_shape, anchors, num_classes),
                             steps_per_epoch=max(1, num_train // batch_size),
@@ -70,7 +70,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
                             validation_steps=max(1, num_val // batch_size),
                             max_queue_size=4,
                             workers=4,
-                            epochs=10,
+                            epochs=20,
                             initial_epoch=0,
                             callbacks=[logging, checkpoint, early_stopping])
         model.save_weights(log_dir + 'trained_weights_stage_1.h5')
@@ -84,7 +84,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
                       loss={'yolo_loss': lambda y_true, y_pred: y_pred})  # recompile to apply the change
         print('Unfreeze all of the layers.')
 
-        batch_size = 8  # note that more GPU memory is required after unfreezing the body
+        batch_size = 18  # note that more GPU memory is required after unfreezing the body
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
         model.fit_generator(data_generator_wrapper(parsed_training_data, batch_size, input_shape, anchors, num_classes),
                             steps_per_epoch=max(1, num_train // batch_size),
@@ -92,7 +92,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
                                                                    anchors,
                                                                    num_classes),
                             validation_steps=max(1, num_val // batch_size),
-                            epochs=60,
+                            epochs=1000,
                             initial_epoch=10,
                             callbacks=[logging, checkpoint, reduce_lr, early_stopping])
         model.save_weights(log_dir + 'trained_weights_final.h5')
@@ -190,7 +190,8 @@ def data_generator(annotation_lines, batch_size, input_shape, anchors, num_class
         for b in range(batch_size):
             if i == 0:
                 np.random.shuffle(annotation_lines)
-            image, box = get_random_data(annotation_lines[i], input_shape, random=True)
+            # image, box = get_random_data(annotation_lines[i], input_shape, random=True)
+            image, box = do_data_augmentation(annotation_lines[i], input_shape)
             image_data.append(image)
             box_data.append(box)
             i = (i + 1) % n

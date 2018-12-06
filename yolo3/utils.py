@@ -1,7 +1,7 @@
 """Miscellaneous utility functions."""
 
 from functools import reduce
-
+from data_aug.data_aug import *
 from PIL import Image
 import numpy as np
 from matplotlib.colors import rgb_to_hsv, hsv_to_rgb
@@ -32,6 +32,36 @@ def letterbox_image(image, size):
 
 def rand(a=0, b=1):
     return np.random.rand()*(b-a) + a
+
+def do_data_augmentation(annotation_line, input_shape, max_boxes = 20):
+    """using https://github.com/Paperspace/DataAugmentationForObjectDetection"""
+    line = annotation_line.split()
+    image = Image.open(line[0])
+    iw, ih = image.size
+    h, w = input_shape
+    box = np.array([np.array(list(map(int, box.split(',')))) for box in line[1:]])
+    img_, bboxes = RandomHorizontalFlip(.5)(image.copy(), box.copy())
+    # resize image
+    scale = min(w/iw, h/ih)
+    nw = int(iw*scale)
+    nh = int(ih*scale)
+    dx = (w-nw)//2
+    dy = (h-nh)//2
+    image_data=0
+    image = image.resize((nw,nh), Image.BICUBIC)
+    new_image = Image.new('RGB', (w,h), (128,128,128))
+    new_image.paste(image, (dx, dy))
+    image_data = np.array(new_image)/255.
+
+    # correct boxes
+    box_data = np.zeros((max_boxes,5))
+    if len(box)>0:
+        np.random.shuffle(box)
+        if len(box)>max_boxes: box = box[:max_boxes]
+        box[:, [0,2]] = box[:, [0,2]]*scale + dx
+        box[:, [1,3]] = box[:, [1,3]]*scale + dy
+        box_data[:len(box)] = box
+#TODO: left off here
 
 def get_random_data(annotation_line, input_shape, random=True, max_boxes=20, jitter=.3, hue=.1, sat=1.5, val=1.5, proc_img=True):
     '''random preprocessing for real-time data augmentation'''

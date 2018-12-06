@@ -15,11 +15,10 @@ class SpineImageDataPreparer:
         self.do_sliding_windows = True
         self.labeled = True
         self.resize_to_scale = True
-        self.target_scale_px_per_um = 10
+        self.target_scale_px_per_um = 15
         self.sliding_window_side = 256
         self.sliding_window_step = 128
-        self.initial_directory = os.path.join('C:', 'Users', 'smirnovm', 'Documents', 'Data',
-                                              'yolov3_keras_spine_training_with_scale')
+        self.initial_directory = os.path.join("C:\\Users\\smirnovm\\Documents\\Data\\keras_yolo3_spine_training_tifs")
         self.input_files = dict()
         self.initial_image_file_dict = dict()
         self.save_directory = os.path.join('data', 'sliding_window_images')
@@ -63,6 +62,8 @@ class SpineImageDataPreparer:
     def process_individual_row(self, row, image_dir):
         image_path = row.name
         self.load_image(image_path)
+        if 'bounding_boxes' not in row.keys():
+            row.bounding_boxes = None
         row.bounding_boxes = self.nan_to_none(row.bounding_boxes)
         self.rescale_row(row)
         self.make_and_save_sliding_windows(row, image_dir)

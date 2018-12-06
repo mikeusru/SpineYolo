@@ -29,14 +29,17 @@ class SpineYolo(object):
         self.classes_path = os.path.expanduser(_args.classes_path)
         self.anchors_path = os.path.expanduser(_args.anchors_path)
         self.starting_model_path = os.path.expanduser(_args.starting_model_path)
-        self.log_dir = os.path.join('logs','000')
+        self.log_dir = os.path.join('logs', '000')
         self.yolo_detector = None
 
     def detect_input_images(self):
         while True:
-            img = input('Input image filename:')
+            img_path = input('Input image or image list filename:')
+            if os.path.splitext(img_path)[1] == '.txt':
+                self.detect_images_from_file_list(img_path)
+                break
             try:
-                image = Image.open(img)
+                image = Image.open(img_path)
             except:
                 print('Open Error! Try again!')
                 continue
@@ -49,10 +52,23 @@ class SpineYolo(object):
         self.yolo_detector = YOLO()
         self.detect_input_images()
 
+    def detect_images_from_file_list(self, img_path):
+        with open(img_path) as f:
+            lines = f.readlines()
+        for line in lines:
+            try:
+                img_file = line.strip().split()[0]
+                image = Image.open(img_file)
+            except:
+                print('Couldn''t load image file: {}'.format(img_file))
+                continue
+            r_image = self.yolo_detector.detect_image(image)
+            r_image.show()
+
     def train_yolo(self, training_data_to_use=1):
         parsed_training_data = get_lines_from_annotation_file(self.training_data_path)
         parsed_validation_data = get_lines_from_annotation_file(self.validation_data_path)
-        training_samples = round(len(parsed_training_data)*training_data_to_use)
+        training_samples = round(len(parsed_training_data) * training_data_to_use)
         parsed_training_data = parsed_training_data[:training_samples]
         if training_data_to_use != 1:
             self.set_log_dir(os.path.join('logs', 'training_samples_{}'.format(training_samples)))
@@ -75,12 +91,13 @@ class SpineYolo(object):
         spine_data_preparer = SpineImageDataPreparer()
         spine_data_preparer.run()
 
+
 if __name__ == '__main__':
     argparser = YoloArgparse()
     args = argparser.parse_args()
     app = SpineYolo(args)
     next_step = input('detect or train? : ')
     if next_step == 'detect':
-        app.detect_input_images()
+        app.detect()
     if next_step == 'train':
         app.train_yolo()

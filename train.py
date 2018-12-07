@@ -54,8 +54,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
 
     # Train with frozen layers first, to get a stable loss.
     # Adjust num epochs to your dataset. This step is enough to obtain a not bad model.
-    freeze_train = True
-    if freeze_train:
+    if True:
         model.compile(optimizer=Adam(lr=1e-3), loss={
             # use custom yolo_loss Lambda layer.
             'yolo_loss': lambda y_true, y_pred: y_pred})
@@ -84,7 +83,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
                       loss={'yolo_loss': lambda y_true, y_pred: y_pred})  # recompile to apply the change
         print('Unfreeze all of the layers.')
 
-        batch_size = 18  # note that more GPU memory is required after unfreezing the body
+        batch_size = 8  # note that more GPU memory is required after unfreezing the body
         print('Train on {} samples, val on {} samples, with batch size {}.'.format(num_train, num_val, batch_size))
         model.fit_generator(data_generator_wrapper(parsed_training_data, batch_size, input_shape, anchors, num_classes),
                             steps_per_epoch=max(1, num_train // batch_size),

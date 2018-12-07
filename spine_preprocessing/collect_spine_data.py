@@ -232,7 +232,7 @@ class SpineImageDataPreparer:
         row_out = pd.Series(dict(bounding_boxes=boxes_in_window, x=x, y=y, scale=self.target_scale_px_per_um,
                                  original_scale=self.original_scale)).rename(window_file_path)
         self.dataframe_out = self.dataframe_out.append(row_out)
-        # self.write_image(window_file_path, window)
+        self.write_image(window_file_path, window)
 
     def write_dataframe_to_file(self):
         self.dataframe_out.bounding_boxes = self.dataframe_out.bounding_boxes.map(self.boxes_to_strings)

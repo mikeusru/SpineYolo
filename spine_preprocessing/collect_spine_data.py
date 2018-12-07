@@ -26,6 +26,7 @@ class SpineImageDataPreparer:
         self.dataframe = None
         self.dataframe_out = pd.DataFrame()
         self.temp_loaded_image = None
+        self.original_scale = None
         self.training_fraction = 0.7
 
     def set_labeled_state(self, labeled):
@@ -76,6 +77,7 @@ class SpineImageDataPreparer:
 
     def rescale_row(self, row):
         scale = row.scale
+        self.original_scale = scale
         bounding_boxes = row.bounding_boxes
         if self.labeled:
             self.temp_loaded_image, row.bounding_boxes = self.rescale_data(self.temp_loaded_image,
@@ -87,8 +89,6 @@ class SpineImageDataPreparer:
 
     def run_on_single_image(self, image_file):
         self.dataframe = pd.DataFrame({'img_path': [image_file]})
-        # self.load_all_data()
-        # self.convert_all_images_to_float()
         if self.do_sliding_windows:
             sliding_windows_x_shift = []
             sliding_windows_y_shift = []
@@ -229,14 +229,27 @@ class SpineImageDataPreparer:
 
     def save_sliding_window(self, image_dir, x, y, window, boxes_in_window):
         window_file_path = os.path.join(image_dir, 'window_x_{}_y_{}_data.tiff'.format(x, y))
-        row_out = pd.Series(dict(bounding_boxes=boxes_in_window, x=x, y=y, scale=self.target_scale_px_per_um)).rename(
-            window_file_path)
+        row_out = pd.Series(dict(bounding_boxes=boxes_in_window, x=x, y=y, scale=self.target_scale_px_per_um,
+                                 original_scale=self.original_scale)).rename(window_file_path)
         self.dataframe_out = self.dataframe_out.append(row_out)
-        self.write_image(window_file_path, window)
+        # self.write_image(window_file_path, window)
 
     def write_dataframe_to_file(self):
         self.dataframe_out.bounding_boxes = self.dataframe_out.bounding_boxes.map(self.boxes_to_strings)
-        df_train, df_validation = train_test_split(self.dataframe_out, test_size=1 - self.training_fraction)
+        first = True
+        for original_scale in set(self.dataframe_out.original_scale.values):
+            #group images by scale before splitting them so train/test split has good representation of each datasete
+            # cluster, and keeps image sequences separated because shuffling them gets very similar data in train/val groups
+            df_image_group = self.dataframe_out.loc[self.dataframe_out['original_scale'] == original_scale]
+            df_train_add, df_validation_add = train_test_split(df_image_group, test_size=1 - self.training_fraction,
+                                                               shuffle=False)
+            if first:
+                df_train, df_validation = df_train_add, df_validation_add
+                first = False
+            else:
+                df_train = pd.concat([df_train, df_train_add])
+                df_validation = pd.concat([df_validation, df_validation_add])
+        # df_train, df_validation = train_test_split(self.dataframe_out, test_size=1 - self.training_fraction)
         train_path = os.path.join(self.save_directory, 'train.txt')
         validation_path = os.path.join(self.save_directory, 'validation.txt')
         with open(train_path, 'w') as f:

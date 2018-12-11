@@ -18,10 +18,10 @@ class SpineImageDataPreparer:
         self.target_scale_px_per_um = 15
         self.sliding_window_side = 256
         self.sliding_window_step = 128
-        self.initial_directory = os.path.join("C:\\Users\\smirnovm\\Documents\\Data\\keras_yolo3_spine_training_tifs")
+        self.initial_directory = os.path.join("C:\\Users\\smirnovm\\Documents\\Data\\example_test")
         self.input_files = dict()
         self.initial_image_file_dict = dict()
-        self.save_directory = os.path.join('data', 'sliding_window_images')
+        self.save_directory = os.path.join('data', 'example_test')
         self.output_file_list = []
         self.dataframe = None
         self.dataframe_out = pd.DataFrame()

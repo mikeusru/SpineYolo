@@ -19,11 +19,13 @@ def compose(*funcs):
     else:
         raise ValueError('Composition of empty sequence not supported.')
 
+
 def show_image_transformation(img, box):
     if False:
         print('box size: {}'.format(box.size))
         plt.imshow(draw_rect(img, box))
         plt.show()
+
 
 def letterbox_image(image, size):
     '''resize image with unchanged aspect ratio using padding'''
@@ -62,43 +64,49 @@ def do_data_augmentation(annotation_line, input_shape, max_boxes=20):
     image_data = np.array(new_image)
 
     # correct boxes
-    box_data = np.zeros((max_boxes, 5))
     if len(box) > 0:
         np.random.shuffle(box)
         if len(box) > max_boxes: box = box[:max_boxes]
         box[:, [0, 2]] = box[:, [0, 2]] * scale + dx
         box[:, [1, 3]] = box[:, [1, 3]] * scale + dy
 
-    # image_data.dtype
-    # seq = Sequence([RandomHorizontalFlip(.5), RandomScale(.5, diff=True), RandomTranslate(.5, diff=True),
-    #                 RandomRotate(20), RandomShear(.3)])
-    # image_data, box = seq(image_data.copy(), box.copy())
     show_image_transformation(image_data, box)
-    if len(box) > 0:
-        image_data, box = RandomHorizontalFlip(.5)(image_data.copy(), box.copy())
-        show_image_transformation(image_data, box)
-    if len(box) > 0:
-        image_data, box = RandomScale(.5, diff=True)(image_data.copy(), box.copy())
-        show_image_transformation(image_data, box)
-    if len(box) > 0:
-        image_data, box = RandomTranslate(.5, diff=True)(image_data.copy(), box.copy())
-        show_image_transformation(image_data, box)
-    if len(box) > 0:
-        image_data, box = RandomRotate(20)(image_data.copy(), box.copy())
-        show_image_transformation(image_data, box)
-    if len(box) > 0:
-        image_data, box = RandomHorizontalFlip(.5)(image_data.copy(), box.copy())
-        show_image_transformation(image_data, box)
-    if len(box) > 0:
-        image_data, box = RandomShear(.3)(image_data.copy(), box.copy())
-        show_image_transformation(image_data, box)
-    box_data[:len(box)] = box
-    image_data = np.array(image_data) / 255.
 
-    return image_data, box_data
+    box_exists = False
+    count = 0
+    while box_exists is False:
+        count += 1
+        if count > 100:
+            print('counter reached {}'.format(count))
+        image_data_transformed, box_transformed = RandomHorizontalFlip(.5)(image_data.copy(), box.copy())
+        show_image_transformation(image_data_transformed, box_transformed)
+        if len(box_transformed) == 0:
+            continue
+        image_data_transformed, box_transformed = RandomScale(.3, diff=True)(image_data_transformed.copy(), box_transformed.copy())
+        show_image_transformation(image_data_transformed, box_transformed)
+        if len(box_transformed) == 0:
+            continue
+        image_data_transformed, box_transformed = RandomTranslate(.3, diff=True)(image_data_transformed.copy(), box_transformed.copy())
+        show_image_transformation(image_data_transformed, box_transformed)
+        if len(box_transformed) == 0:
+            continue
+        image_data_transformed, box_transformed = RandomRotate(20)(image_data_transformed.copy(), box_transformed.copy())
+        show_image_transformation(image_data_transformed, box_transformed)
+        if len(box_transformed) == 0:
+            continue
+        image_data_transformed, box_transformed = RandomHorizontalFlip(.5)(image_data_transformed.copy(), box_transformed.copy())
+        show_image_transformation(image_data_transformed, box_transformed)
+        if len(box_transformed) == 0:
+            continue
+        image_data_transformed, box_transformed = RandomShear(.2)(image_data_transformed.copy(), box_transformed.copy())
+        show_image_transformation(image_data_transformed, box_transformed)
+        if len(box_transformed) > 0:
+            box_exists = True
+    box_data = np.zeros((max_boxes, 5))
+    box_data[:len(box_transformed)] = box_transformed
+    image_data_transformed = np.array(image_data_transformed) / 255.
 
-
-
+    return image_data_transformed, np.round(box_data, 0)
 
 
 def get_random_data(annotation_line, input_shape, random=True, max_boxes=20, jitter=.3, hue=.1, sat=1.5, val=1.5,

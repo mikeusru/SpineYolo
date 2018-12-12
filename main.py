@@ -101,7 +101,7 @@ class SpineYoloGui(tk.Tk):
 
     def train(self):
         self.set_training_log_dir()
-        self.spine_yolo.set_starting_model_path(self.trained_model_path.get())
+        self.spine_yolo.set_model_path(self.trained_model_path.get())
         self.spine_yolo.set_log_dir(self.log_dir.get())
         self.spine_yolo.run()
 

@@ -68,6 +68,7 @@ class YOLO(object):
         num_classes = len(self.class_names)
         is_tiny_version = num_anchors == 6  # default setting
         try:
+            print(self.model_path)
             self.yolo_model = load_model(model_path, compile=False)
         except:
             self.yolo_model = tiny_yolo_body(Input(shape=(None, None, 3)), num_anchors // 2, num_classes) \

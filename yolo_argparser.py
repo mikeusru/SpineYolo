@@ -22,9 +22,9 @@ class YoloArgparse(argparse.ArgumentParser):
 
         self.add_argument(
             '-s',
-            '--starting_model_path',
+            '--model_path',
             help="path for starting weights",
-            default=os.path.join('model_data', 'yolo_spines_scaled.h5'))
+            default=os.path.join('model_data', 'yolo_spines_scaled_data_aug.h5'))
 
         self.add_argument(
             '-a',

@@ -15,6 +15,6 @@ args = argparser.parse_args()
 app = SpineYolo(args)
 model_path = 'model_data\\yolo.h5'
 # model_path = os.path.join('model_data', 'yolo.h5')
-app.set_starting_model_path(model_path)
+app.set_model_path(model_path)
 app.train_yolo(training_data_to_use=1)
 

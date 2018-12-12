@@ -28,8 +28,8 @@ class SpineYolo(object):
         self.validation_data_path = os.path.expanduser(_args.val_data_path)
         self.classes_path = os.path.expanduser(_args.classes_path)
         self.anchors_path = os.path.expanduser(_args.anchors_path)
-        self.starting_model_path = os.path.expanduser(_args.starting_model_path)
-        self.log_dir = os.path.join('logs', '000')
+        self.model_path = os.path.expanduser(_args.model_path)
+        self.log_dir = os.path.join('logs', '001')
         self.yolo_detector = None
 
     def detect_input_images(self):
@@ -49,7 +49,7 @@ class SpineYolo(object):
         self.yolo_detector.close_session()
 
     def detect(self):
-        self.yolo_detector = YOLO()
+        self.yolo_detector = YOLO(**{"model_path": self.model_path})
         self.detect_input_images()
 
     def detect_images_from_file_list(self, img_path):
@@ -73,7 +73,7 @@ class SpineYolo(object):
         if training_data_to_use != 1:
             self.set_log_dir(os.path.join('logs', 'training_samples_{}'.format(training_samples)))
         train_spine_yolo(parsed_training_data, parsed_validation_data, self.log_dir, self.classes_path,
-                         self.anchors_path, self.starting_model_path)
+                         self.anchors_path, self.model_path)
 
     def set_log_dir(self, log_dir):
         self.log_dir = log_dir
@@ -84,8 +84,8 @@ class SpineYolo(object):
     def set_validation_data_path(self, path):
         self.validation_data_path = path
 
-    def set_starting_model_path(self, path):
-        self.starting_model_path = path
+    def set_model_path(self, path):
+        self.model_path = path
 
     def prepare_image_data(self, images_path, is_labeled=False):
         spine_data_preparer = SpineImageDataPreparer()
@@ -95,6 +95,7 @@ class SpineYolo(object):
 if __name__ == '__main__':
     argparser = YoloArgparse()
     args = argparser.parse_args()
+    print(args)
     app = SpineYolo(args)
     next_step = input('detect or train? : ')
     if next_step == 'detect':

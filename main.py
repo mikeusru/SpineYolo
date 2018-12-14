@@ -19,15 +19,10 @@ class SpineYoloGui(tk.Tk):
         self.spine_yolo = SpineYolo(YoloArgparse().parse_args())
         self.training_data_path = tk.StringVar()
         self.trained_model_path = tk.StringVar()
+        self.train_test_split = tk.StringVar()
         self.log_dir = tk.StringVar()
-        self.set_default_variables()
+        self.load_settings()
         self.gui = self.define_gui_elements()
-
-    def set_default_variables(self):
-        default_path = os.path.expanduser('~')
-        self.training_data_path.set(os.path.join(default_path, 'training_data'))
-        self.log_dir.set(os.path.join(default_path, 'logs'))
-        self.trained_model_path.set(os.path.join(default_path, 'models', 'trained_model.h5'))
 
     def define_gui_elements(self):
         gui = dict()
@@ -40,8 +35,8 @@ class SpineYoloGui(tk.Tk):
         gui['select_training_data_button'].grid(row=0, column=2, sticky='nw', padx=10, pady=10)
 
         gui['prepare_training_data_button'] = tk.Button(self, text="Prepare",
-                                                       font=LARGE_FONT,
-                                                       command=self.prepare_training_data)
+                                                        font=LARGE_FONT,
+                                                        command=self.prepare_training_data)
         gui['prepare_training_data_button'].grid(row=0, column=3, sticky='nw', padx=10, pady=10)
 
         gui['training_data_folder_preview_entry'] = ttk.Entry(self,
@@ -61,18 +56,25 @@ class SpineYoloGui(tk.Tk):
                                             textvariable=self.trained_model_path,
                                             state='readonly')
         gui['model_path_entry'].grid(row=1, column=1, padx=10, pady=10, sticky='nw')
+        gui['train_test_split_label'] = tk.Label(self, text="Trained Model File:",
+                                                 font=LARGE_FONT)
+        gui['train_test_split_label'].grid(row=1, column=0, sticky='nw', padx=10, pady=10)
+
         gui['train_model_button'] = tk.Button(self, text='Train Model',
                                               font=LARGE_FONT,
                                               command=self.train)
         gui['train_model_button'].grid(row=3, column=0, sticky='nw', padx=10, pady=10)
-        gui['test_model_button'] = tk.Button(self, text='Test Model',
-                                             font=LARGE_FONT,
-                                             command=self.test)
-        gui['test_model_button'].grid(row=3, column=1, sticky='nw', padx=10, pady=10)
-        gui['run_on_single_image_button'] = tk.Button(self, text='Run On Single Image',
-                                                      font=LARGE_FONT,
-                                                      command=self.test_single_image)
-        gui['run_on_single_image_button'].grid(row=4, column=0, sticky='nw', padx=10, pady=10)
+        gui['detect_spines_button'] = tk.Button(self, text='Detect Spines',
+                                                font=LARGE_FONT,
+                                                command=self.detect_spines)
+        gui['detect_spines_button'].grid(row=4, column=0, sticky='nw', padx=10, pady=10)
+        gui['train_test_split_label'] = tk.Label(self, text="Train/Test Split (0-1):",
+                                                 font=LARGE_FONT)
+        gui['train_test_split_label'].grid(row=5, column=0, sticky='nw', padx=10, pady=10)
+        gui['train_test_split_entry'] = ttk.Entry(self,
+                                                  width=4,
+                                                  textvariable=self.train_test_split)
+        gui['train_test_split_entry'].grid(row=5, column=1, padx=10, pady=10, sticky='nw')
         return gui
 
     def select_training_data(self):
@@ -90,13 +92,10 @@ class SpineYoloGui(tk.Tk):
 
     def set_training_log_dir(self):
         path = askdirectory(initialdir=self.log_dir.get(),
-                                 title="Choose log file directory")
+                            title="Choose log file directory")
         self.log_dir.set(path)
 
-    def test(self):
-        pass
-
-    def test_single_image(self):
+    def detect_spines(self):
         pass
 
     def train(self):
@@ -104,6 +103,19 @@ class SpineYoloGui(tk.Tk):
         self.spine_yolo.set_model_path(self.trained_model_path.get())
         self.spine_yolo.set_log_dir(self.log_dir.get())
         self.spine_yolo.run()
+
+    def load_settings(self):
+        with open('settings.txt') as f:
+            lines = f.readlines()
+        lines = [line.strip() for line in lines]
+        lines = [line.split() for line in lines]
+        settings_dict = {}
+        for line in lines:
+            settings_dict[line[0]] = line[2]
+        self.training_data_path.set(settings_dict['training_data_path'])
+        self.trained_model_path.set(settings_dict['trained_model_path'])
+        self.train_test_split.set(settings_dict['train_test_split'])
+        self.log_dir.set(settings_dict['log_dir'])
 
 
 if __name__ == "__main__":

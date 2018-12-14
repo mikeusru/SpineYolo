@@ -29,7 +29,7 @@ class SpineYolo(object):
         self.classes_path = os.path.expanduser(_args.classes_path)
         self.anchors_path = os.path.expanduser(_args.anchors_path)
         self.model_path = os.path.expanduser(_args.model_path)
-        self.log_dir = os.path.join('logs', '003')
+        self.log_dir = os.path.join('logs', '005')
         self.yolo_detector = None
 
     def detect_input_images(self):

@@ -21,7 +21,7 @@ class YoloArgparse(argparse.ArgumentParser):
             default=os.path.join('data', 'sliding_window_images', 'validation.txt'))
 
         self.add_argument(
-            '-s',
+            '-m',
             '--model_path',
             help="path for starting weights",
             default=os.path.join('model_data', 'yolo_spines_scaled_data_aug.h5'))

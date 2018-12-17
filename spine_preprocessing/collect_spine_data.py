@@ -32,6 +32,9 @@ class SpineImageDataPreparer:
     def set_labeled_state(self, labeled):
         self.labeled = labeled
 
+    def set_train_test_split(self, train_test_split):
+        self.training_fraction = float(train_test_split)
+
     def set_resizing(self, do_resizing):
         self.resize_to_scale = do_resizing
 

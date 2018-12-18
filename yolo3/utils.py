@@ -81,40 +81,40 @@ def do_data_augmentation(annotation_line, input_shape, max_boxes=20):
             if count > 100:
                 print('counter reached {}'.format(count))
             image_data_transformed, box_transformed = RandomHorizontalFlip(.5)(image_data.copy(), box.copy())
-            show_image_transformation(image_data_transformed, box_transformed)
+            # show_image_transformation(image_data_transformed, box_transformed)
             if len(box_transformed) == 0:
                 continue
             image_data_transformed, box_transformed = RandomScale(.3, diff=True)(image_data_transformed.copy(),
                                                                                  box_transformed.copy())
-            show_image_transformation(image_data_transformed, box_transformed)
+            # show_image_transformation(image_data_transformed, box_transformed)
             if len(box_transformed) == 0:
                 continue
             image_data_transformed, box_transformed = RandomTranslate(.3, diff=True)(image_data_transformed.copy(),
                                                                                      box_transformed.copy())
-            show_image_transformation(image_data_transformed, box_transformed)
+            # show_image_transformation(image_data_transformed, box_transformed)
             if len(box_transformed) == 0:
                 continue
             image_data_transformed, box_transformed = RandomRotate(20)(image_data_transformed.copy(),
                                                                        box_transformed.copy())
-            show_image_transformation(image_data_transformed, box_transformed)
+            # show_image_transformation(image_data_transformed, box_transformed)
             if len(box_transformed) == 0:
                 continue
             image_data_transformed, box_transformed = RandomHorizontalFlip(.5)(image_data_transformed.copy(),
                                                                                box_transformed.copy())
-            show_image_transformation(image_data_transformed, box_transformed)
+            # show_image_transformation(image_data_transformed, box_transformed)
             if len(box_transformed) == 0:
                 continue
             image_data_transformed, box_transformed = RandomShear(.2)(image_data_transformed.copy(), box_transformed.copy())
-            show_image_transformation(image_data_transformed, box_transformed)
+            # show_image_transformation(image_data_transformed, box_transformed)
             if len(box_transformed) > 0:
                 box_exists = True
     else:
         box_transformed = box.copy()
         image_data_transformed = image_data.copy()
-
     box_data = np.zeros((max_boxes, 5))
     box_data[:len(box_transformed)] = box_transformed
     image_data_transformed = np.array(image_data_transformed) / 255.
+    show_image_transformation(image_data_transformed, box_data)
 
     return image_data_transformed, np.round(box_data, 0)
 

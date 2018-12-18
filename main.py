@@ -98,6 +98,7 @@ class SpineYoloGui(tk.Tk):
         self.log_dir.set(path)
 
     def detect_spines(self):
+        self.spine_yolo.set_model_path(self.trained_model_path.get())
         self.spine_yolo.detect()
 
     def train(self):

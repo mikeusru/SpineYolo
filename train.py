@@ -189,8 +189,8 @@ def data_generator(annotation_lines, batch_size, input_shape, anchors, num_class
         for b in range(batch_size):
             if i == 0:
                 np.random.shuffle(annotation_lines)
-            image, box = get_random_data(annotation_lines[i], input_shape, random=True)
-            # image, box = do_data_augmentation(annotation_lines[i], input_shape)
+            # image, box = get_random_data(annotation_lines[i], input_shape, random=True)
+            image, box = do_data_augmentation(annotation_lines[i], input_shape)
             image_data.append(image)
             box_data.append(box)
             i = (i + 1) % n

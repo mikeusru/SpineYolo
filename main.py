@@ -85,7 +85,7 @@ class SpineYoloGui(tk.Tk):
     def prepare_training_data(self):
         self.spine_yolo.prepare_image_data(self.training_data_path.get(),
                                            is_labeled=True,
-                                           train_test_split = self.train_test_split.get())
+                                           train_test_split=self.train_test_split.get())
 
     def select_model(self):
         path = askopenfilename(initialdir=self.trained_model_path.get(),
@@ -98,10 +98,11 @@ class SpineYoloGui(tk.Tk):
         self.log_dir.set(path)
 
     def detect_spines(self):
-        self.spine_yolo.detect_input_images()
+        self.spine_yolo.detect()
 
     def train(self):
-        self.spine_yolo.set_training_data_path(self.training_data_path.get())
+        self.spine_yolo.set_training_data_path(os.path.join(self.training_data_path.get(), 'train.txt'))
+        self.spine_yolo.set_validation_data_path(os.path.join(self.training_data_path.get(), 'validation.txt'))
         self.spine_yolo.set_model_path(self.trained_model_path.get())
         self.spine_yolo.set_log_dir(self.log_dir.get())
         self.spine_yolo.train_yolo()

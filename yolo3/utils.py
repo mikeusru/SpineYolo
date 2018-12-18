@@ -108,9 +108,9 @@ def do_data_augmentation(annotation_line, input_shape, max_boxes=20):
             show_image_transformation(image_data_transformed, box_transformed)
             if len(box_transformed) > 0:
                 box_exists = True
-        else:
-            box_transformed = box.copy()
-            image_data_transformed = image_data.copy()
+    else:
+        box_transformed = box.copy()
+        image_data_transformed = image_data.copy()
 
     box_data = np.zeros((max_boxes, 5))
     box_data[:len(box_transformed)] = box_transformed

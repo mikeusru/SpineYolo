@@ -1,53 +1,61 @@
-# keras-yolo3
+# SpineYolo
 
-[![license](https://img.shields.io/github/license/mashape/apistatus.svg)](LICENSE)
 
 ## Introduction
 
-A Keras implementation of YOLOv3 (Tensorflow backend) inspired by [allanzelener/YAD2K](https://github.com/allanzelener/YAD2K).
-
+A Keras implementation of YOLOv3 (Tensorflow backend) for detecting dendritic spines. Inspired by [allanzelener/YAD2K](https://github.com/allanzelener/YAD2K) and [qqwweee/keras-yolo3](https://github.com/qqwweee/keras-yolo3)
 
 ---
 
-## Quick Start
+## Installation (Windows)
 
-1. Download YOLOv3 weights from [YOLO website](http://pjreddie.com/darknet/yolo/).
-2. Convert the Darknet YOLO model to a Keras model.
-3. Run YOLO detection.
+You need an NVIDIA GPU to run this
 
+If you don't know what you're doing, I suggest installing PyCharm and setting up a virtual environment
+
+1. Install [CUDA 9.0](https://developer.nvidia.com/cuda-90-download-archive?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal)
+1. Install [cuDNN v7.0.xx for CUDA 9.0](https://developer.nvidia.com/rdp/cudnn-archive)
+1. Clone this repository
+1. Download pre-trained [SpineYoloV3 weights](https://cloud.mpfi.org/url/yolov3spinesh5) file and place it in the model_data folder
+1. Install requirements from requirements.txt
+1. Run SpineYolo
 ```
-wget https://pjreddie.com/media/files/yolov3.weights
-python convert.py yolov3.cfg yolov3.weights model_data/yolo.h5
-python yolo_video.py [OPTIONS...] --image, for image detection mode, OR
-python yolo_video.py [video_path] [output_path (optional)]
+pip install -r requirements.txt
+python main.py
 ```
 
-For Tiny YOLOv3, just do in a similar way, just specify model path and anchor path with `--model model_file` and `--anchors anchor_file`.
+## Installation (Linux)
+
+You use linux you know what you're doing. I'll make a docker container for this eventually.
 
 ### Usage
-Use --help to see usage of yolo_video.py:
-```
-usage: yolo_video.py [-h] [--model MODEL] [--anchors ANCHORS]
-                     [--classes CLASSES] [--gpu_num GPU_NUM] [--image]
-                     [--input] [--output]
+For the Gui, run main.py
 
-positional arguments:
-  --input        Video input path
-  --output       Video output path
+For command line, run spine_yolo. You can add in commandline arguments.
+It will then ask you if you want to detect or train in the command line. 
+If you type detect, you can then pass in an image file path, or a textfile containing a bunch of image file paths.
+
+Use --help to see usage of spine_yolo.py:
+```
+usage: spine_yolo.py [-h] [-t TRAIN_DATA_PATH] [-v VAL_DATA_PATH]
+                     [-m MODEL_PATH] [-a ANCHORS_PATH] [-c CLASSES_PATH]
+
+Retrain or 'fine-tune' a pretrained YOLOv3 model for your own data.
 
 optional arguments:
-  -h, --help         show this help message and exit
-  --model MODEL      path to model weight file, default model_data/yolo.h5
-  --anchors ANCHORS  path to anchor definitions, default
-                     model_data/yolo_anchors.txt
-  --classes CLASSES  path to class definitions, default
-                     model_data/coco_classes.txt
-  --gpu_num GPU_NUM  Number of GPU to use, default 1
-  --image            Image detection mode, will ignore all positional arguments
+  -h, --help            show this help message and exit
+  -t TRAIN_DATA_PATH, --train_data_path TRAIN_DATA_PATH
+                        path to training data
+  -v VAL_DATA_PATH, --val_data_path VAL_DATA_PATH
+                        path to training data
+  -m MODEL_PATH, --model_path MODEL_PATH
+                        path for starting weights
+  -a ANCHORS_PATH, --anchors_path ANCHORS_PATH
+                        path to anchors file, defaults to yolo_anchors.txt
+  -c CLASSES_PATH, --classes_path CLASSES_PATH
+                        path to classes file, defaults to spine_classes.txt
 ```
 ---
-
-4. MultiGPU usage: use `--gpu_num N` to use N GPUs. It is passed to the [Keras multi_gpu_model()](https://keras.io/utils/#multi_gpu_model).
 
 ## Training
 
@@ -55,7 +63,6 @@ optional arguments:
     One row for one image;  
     Row format: `image_file_path box1 box2 ... boxN`;  
     Box format: `x_min,y_min,x_max,y_max,class_id` (no space).  
-    For VOC dataset, try `python voc_annotation.py`  
     Here is an example:
     ```
     path/to/img1.jpg 50,100,150,200,0 30,50,200,120,3
@@ -63,14 +70,10 @@ optional arguments:
     ...
     ```
 
-2. Make sure you have run `python convert.py -w yolov3.cfg yolov3.weights model_data/yolo_weights.h5`  
-    The file model_data/yolo_weights.h5 is used to load pretrained weights.
-
-3. Modify train.py and start training.  
-    `python train.py`  
-    Use your trained weights or checkpoint weights with command line option `--model model_file` when using yolo_video.py
-    Remember to modify class path or anchor path, with `--classes class_file` and `--anchors anchor_file`.
-
+3. Run main.py, set the model you want to use, and start training.  
+    `python main.py `  
+    Use your trained weights or checkpoint weights 
+    
 If you want to use original pretrained weights for YOLOv3:  
     1. `wget https://pjreddie.com/media/files/darknet53.conv.74`  
     2. rename it as darknet53.weights  

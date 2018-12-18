@@ -3,6 +3,9 @@
 *.weights
 *.h5
 logs/
+.idea/
+data/
+venv_windows/
 *_test.py
 
 # Byte-compiled / optimized / DLL files

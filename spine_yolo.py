@@ -57,13 +57,26 @@ class SpineYolo(object):
             lines = f.readlines()
         for line in lines:
             try:
-                img_file = line.strip().split()[0]
-                image = Image.open(img_file)
+                line_list = line.strip().split()
+                img_file = line_list[0]
+                if 'Scale' in line_list:
+                    scale_ind = line_list.index('Scale') + 1
+                    scale = float(line_list[scale_ind])
+                    image_list, coordinate_list = self.scale_and_make_sliding_windows(img_file, scale)
+                    box_list = []
+                    for image, relative_coordinates in zip(image_list, coordinate_list):
+                        _, boxes = self.yolo_detector.detect_image(image)
+                        boxes = self.shift_boxes_using_relative_coordinates(boxes, relative_coordinates)
+                        box_list += boxes
+                    r_image = self.put_boxes_on_image(img_file)
+                    r_image.show()
+                else:
+                    image = Image.open(img_file)
+                    r_image = self.yolo_detector.detect_image(image)
+                    r_image.show()
             except:
                 print('Couldn''t load image file: {}'.format(img_file))
                 continue
-            r_image = self.yolo_detector.detect_image(image)
-            r_image.show()
 
     def train_yolo(self, training_data_to_use=1):
         parsed_training_data = get_lines_from_annotation_file(self.training_data_path)

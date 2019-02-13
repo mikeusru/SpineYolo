@@ -62,9 +62,9 @@ class SpineYolo(object):
                 if 'Scale' in line_list:
                     scale_ind = line_list.index('Scale') + 1
                     scale = float(line_list[scale_ind])
-                    image_list, coordinate_list = self.scale_and_make_sliding_windows(img_file, scale)
+                    spine_data_preparer = self.scale_and_make_sliding_windows(img_file, scale)
                     box_list = []
-                    for image, relative_coordinates in zip(image_list, coordinate_list):
+                    for row in spine_data_preparer.dataframe_out:
                         _, boxes = self.yolo_detector.detect_image(image)
                         boxes = self.shift_boxes_using_relative_coordinates(boxes, relative_coordinates)
                         box_list += boxes
@@ -79,7 +79,13 @@ class SpineYolo(object):
                 continue
 
     def scale_and_make_sliding_windows(self, img_file, scale):
-        pass
+        spine_data_preparer = SpineImageDataPreparer()
+        spine_data_preparer.set_labeled_state(False)
+        spine_data_preparer.set_resizing(True)
+        spine_data_preparer.set_sliding_window_props(True)
+        spine_data_preparer.set_saving(False)
+        spine_data_preparer.run_on_single_image(img_file, scale)
+        return spine_data_preparer
 
     def shift_boxes_using_relative_coordinates(self, boxes, relative_coordinates):
         pass

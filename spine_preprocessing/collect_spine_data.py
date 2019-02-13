@@ -15,6 +15,7 @@ class SpineImageDataPreparer:
         self.do_sliding_windows = True
         self.labeled = True
         self.resize_to_scale = True
+        self.saving = True
         self.target_scale_px_per_um = 15
         self.sliding_window_side = 256
         self.sliding_window_step = 128
@@ -25,9 +26,13 @@ class SpineImageDataPreparer:
         self.output_file_list = []
         self.dataframe = None
         self.dataframe_out = pd.DataFrame()
+        self.images_out = dict()
         self.temp_loaded_image = None
         self.original_scale = None
         self.training_fraction = 0.85
+
+    def set_saving(self, do_saving):
+        self.saving = do_saving
 
     def set_labeled_state(self, labeled):
         self.labeled = labeled
@@ -90,19 +95,11 @@ class SpineImageDataPreparer:
             self.temp_loaded_image, _ = self.rescale_data(self.temp_loaded_image,
                                                           scale=scale)
 
-    def run_on_single_image(self, image_file):
-        self.dataframe = pd.DataFrame({'img_path': [image_file]})
-        if self.do_sliding_windows:
-            sliding_windows_x_shift = []
-            sliding_windows_y_shift = []
-            windows = []
-            for (x, y, window, boxes_in_window) in self.yield_sliding_windows(self.dataframe['images']):
-                sliding_windows_x_shift.append(x)
-                sliding_windows_y_shift.append(y)
-                windows.append(window)
-            return sliding_windows_x_shift, sliding_windows_y_shift, windows
-        else:
-            return self.dataframe['images'][0]
+    def run_on_single_image(self, image_file, scale=None):
+        self.dataframe = pd.DataFrame({'img_path': [image_file], 'scale': scale})
+        self.dataframe = self.dataframe.set_index('img_path')
+        if self.resize_to_scale:
+            self.process_individual_row(self.dataframe.iloc[0], '')
 
     def create_dataframe(self):
         self.get_image_file_dict()
@@ -232,16 +229,21 @@ class SpineImageDataPreparer:
 
     def save_sliding_window(self, image_dir, x, y, window, boxes_in_window):
         window_file_path = os.path.join(image_dir, 'window_x_{}_y_{}_data.tiff'.format(x, y))
-        row_out = pd.Series(dict(bounding_boxes=boxes_in_window, x=x, y=y, scale=self.target_scale_px_per_um,
-                                 original_scale=self.original_scale)).rename(window_file_path)
+        window_for_df = []
+        if not self.saving:
+            window_for_df = window.copy()
+        row_out = pd.Series(
+            dict(window=window_for_df, bounding_boxes=boxes_in_window, x=x, y=y, scale=self.target_scale_px_per_um,
+                 original_scale=self.original_scale)).rename(window_file_path)
         self.dataframe_out = self.dataframe_out.append(row_out)
-        self.write_image(window_file_path, window)
+        if self.saving:
+            self.write_image(window_file_path, window)
 
     def write_dataframe_to_file(self):
         self.dataframe_out.bounding_boxes = self.dataframe_out.bounding_boxes.map(self.boxes_to_strings)
         first = True
         for original_scale in set(self.dataframe_out.original_scale.values):
-            #group images by scale before splitting them so train/test split has good representation of each datasete
+            # group images by scale before splitting them so train/test split has good representation of each datasete
             # cluster, and keeps image sequences separated because shuffling them gets very similar data in train/val groups
             df_image_group = self.dataframe_out.loc[self.dataframe_out['original_scale'] == original_scale]
             df_train_add, df_validation_add = train_test_split(df_image_group, test_size=1 - self.training_fraction,

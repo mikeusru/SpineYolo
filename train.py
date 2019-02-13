@@ -44,7 +44,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
                          weights_path=model_path)  # make sure you know what you freeze
 
     logging = TensorBoard(log_dir=log_dir)
-    checkpoint = ModelCheckpoint(os.path.join(log_dir , 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5'),
+    checkpoint = ModelCheckpoint(os.path.join(log_dir, 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5'),
                                  monitor='val_loss', save_weights_only=True, save_best_only=True, period=3)
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1)
@@ -54,7 +54,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
 
     # Train with frozen layers first, to get a stable loss.
     # Adjust num epochs to your dataset. This step is enough to obtain a not bad model.
-    if False:
+    if True:
         model.compile(optimizer=Adam(lr=1e-3), loss={
             # use custom yolo_loss Lambda layer.
             'yolo_loss': lambda y_true, y_pred: y_pred})
@@ -72,7 +72,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
                             epochs=20,
                             initial_epoch=0,
                             callbacks=[logging, checkpoint, early_stopping])
-        model.save_weights(log_dir + 'trained_weights_stage_1.h5')
+        model.save_weights(os.path.join(log_dir, 'trained_weights_stage_1.h5'))
 
     # Unfreeze and continue training, to fine-tune.
     # Train longer if the result is not good.
@@ -94,7 +94,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
                             epochs=1000,
                             initial_epoch=10,
                             callbacks=[logging, checkpoint, reduce_lr, early_stopping])
-        model.save_weights(log_dir + 'trained_weights_final.h5')
+        model.save_weights(os.path.join(log_dir, 'trained_weights_final.h5'))
 
     # Further training if needed.
 

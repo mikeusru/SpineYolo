@@ -78,6 +78,15 @@ class SpineYolo(object):
                 print('Couldn''t load image file: {}'.format(img_file))
                 continue
 
+    def scale_and_make_sliding_windows(self, img_file, scale):
+        pass
+
+    def shift_boxes_using_relative_coordinates(self, boxes, relative_coordinates):
+        pass
+
+    def put_boxes_on_image(self, img_file):
+        pass
+
     def train_yolo(self, training_data_to_use=1):
         parsed_training_data = get_lines_from_annotation_file(self.training_data_path)
         parsed_validation_data = get_lines_from_annotation_file(self.validation_data_path)

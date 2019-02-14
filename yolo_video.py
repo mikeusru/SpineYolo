@@ -13,7 +13,7 @@ def detect_img(yolo):
             print('Open Error! Try again!')
             continue
         else:
-            r_image = yolo.detect_image(image)
+            r_image, _, _, _ = yolo.detect_image(image)
             r_image.show()
     yolo.close_session()
 

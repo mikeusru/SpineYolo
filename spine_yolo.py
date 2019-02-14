@@ -44,7 +44,7 @@ class SpineYolo(object):
                 print('Open Error! Try again!')
                 continue
             else:
-                r_image = self.yolo_detector.detect_image(image)
+                r_image, _, _, _ = self.yolo_detector.detect_image(image)
                 r_image.show()
         self.yolo_detector.close_session()
 
@@ -62,7 +62,7 @@ class SpineYolo(object):
                 if 'Scale' in line_list:
                     scale_ind = line_list.index('Scale') + 1
                     scale = float(line_list[scale_ind])
-                    spine_data_preparer = self.scale_and_make_sliding_windows(img_file, scale)
+                    spine_data_preparer = self.split_and_detect(img_file, scale)
                     box_list = []
                     for row in spine_data_preparer.dataframe_out:
                         _, boxes = self.yolo_detector.detect_image(image)
@@ -72,14 +72,15 @@ class SpineYolo(object):
                     r_image.show()
                 else:
                     image = Image.open(img_file)
-                    r_image = self.yolo_detector.detect_image(image)
+                    r_image, _, _, _ = self.yolo_detector.detect_image(image)
                     r_image.show()
             except:
                 print('Couldn''t load image file: {}'.format(img_file))
                 continue
 
-    def scale_and_make_sliding_windows(self, img_file, scale):
+    def split_and_detect(self, img_file, scale):
         spine_data_preparer = SpineImageDataPreparer()
+        spine_data_preparer.set_detector(self.yolo_detector)
         spine_data_preparer.set_labeled_state(False)
         spine_data_preparer.set_resizing(True)
         spine_data_preparer.set_sliding_window_props(True)

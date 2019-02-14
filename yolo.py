@@ -166,7 +166,7 @@ class YOLO(object):
 
         end = timer()
         print(end - start)
-        return image
+        return image, out_boxes, out_scores, out_classes
 
     def close_session(self):
         self.sess.close()
@@ -192,7 +192,7 @@ def detect_video(yolo, video_path, output_path=""):
     while True:
         return_value, frame = vid.read()
         image = Image.fromarray(frame)
-        image = yolo.detect_image(image)
+        image, _, _, _ = yolo.detect_image(image)
         result = np.asarray(image)
         curr_time = timer()
         exec_time = curr_time - prev_time

@@ -30,6 +30,10 @@ class SpineImageDataPreparer:
         self.temp_loaded_image = None
         self.original_scale = None
         self.training_fraction = 0.85
+        self.detector = None
+
+    def set_detector(self, detector):
+        self.detector = detector
 
     def set_saving(self, do_saving):
         self.saving = do_saving
@@ -229,12 +233,15 @@ class SpineImageDataPreparer:
 
     def save_sliding_window(self, image_dir, x, y, window, boxes_in_window):
         window_file_path = os.path.join(image_dir, 'window_x_{}_y_{}_data.tiff'.format(x, y))
-        window_for_df = []
+        dict_out = dict(bounding_boxes=boxes_in_window, x=x, y=y, scale=self.target_scale_px_per_um,
+                        original_scale=self.original_scale)
         if not self.saving:
-            window_for_df = window.copy()
-        row_out = pd.Series(
-            dict(window=window_for_df, bounding_boxes=boxes_in_window, x=x, y=y, scale=self.target_scale_px_per_um,
-                 original_scale=self.original_scale)).rename(window_file_path)
+            dict_out.update({'window': window.copy()})
+            if self.detector is not None:
+                img_with_boxes, out_boxes, out_scores, out_classes = self.detector.detect_image(window)
+                dict_out.update({'img_with_boxes': img_with_boxes, 'boxes': out_boxes, 'scores': out_scores,
+                                 'classes': out_classes})
+        row_out = pd.Series(dict_out).rename(window_file_path)
         self.dataframe_out = self.dataframe_out.append(row_out)
         if self.saving:
             self.write_image(window_file_path, window)

@@ -4,7 +4,7 @@ This is a class for training and evaluating yadk2
 import os
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFont, ImageDraw
 from keras.layers import Input
 
 from spine_preprocessing.collect_spine_data import SpineImageDataPreparer
@@ -56,27 +56,37 @@ class SpineYolo(object):
         with open(img_path) as f:
             lines = f.readlines()
         for line in lines:
-            try:
-                line_list = line.strip().split()
-                img_file = line_list[0]
-                if 'Scale' in line_list:
-                    scale_ind = line_list.index('Scale') + 1
-                    scale = float(line_list[scale_ind])
-                    spine_data_preparer = self.split_and_detect(img_file, scale)
-                    box_list = []
-                    for row in spine_data_preparer.dataframe_out:
-                        _, boxes = self.yolo_detector.detect_image(image)
-                        boxes = self.shift_boxes_using_relative_coordinates(boxes, relative_coordinates)
-                        box_list += boxes
-                    r_image = self.put_boxes_on_image(img_file)
-                    r_image.show()
-                else:
+            line_list = line.strip().split()
+            img_file = line_list[0]
+            if 'Scale' in line_list:
+                scale_ind = line_list.index('Scale') + 1
+                scale = float(line_list[scale_ind])
+                spine_data_preparer = self.split_and_detect(img_file, scale)
+                spine_data_preparer.dataframe_out = spine_data_preparer.dataframe_out.apply(self.shift_boxes, axis=1)
+                # for row in spine_data_preparer.dataframe_out:
+                #     if row.boxes.size > 0:
+                #         for box, score in zip(row.boxes, row.scores):
+                #             box[[0, 2]] += row.y
+                #             box[[1, 3]] += row.x
+                #             boxes_shifted_and_scores.append((box, score))
+                r_image = self.put_boxes_on_image(img_file, spine_data_preparer.dataframe_out)
+                r_image.show()
+            else:
+                try:
                     image = Image.open(img_file)
                     r_image, _, _, _ = self.yolo_detector.detect_image(image)
                     r_image.show()
-            except:
-                print('Couldn''t load image file: {}'.format(img_file))
-                continue
+                except:
+                    print('Couldn''t load image file: {}'.format(img_file))
+                    continue
+
+    @staticmethod
+    def shift_boxes(row):
+        if row.out_boxes is not None:
+            for i in range(len(row.out_boxes)):
+                row.out_boxes[i][[0, 2]] += row.y
+                row.out_boxes[i][[1, 3]] += row.x
+        return row
 
     def split_and_detect(self, img_file, scale):
         spine_data_preparer = SpineImageDataPreparer()
@@ -88,11 +98,40 @@ class SpineYolo(object):
         spine_data_preparer.run_on_single_image(img_file, scale)
         return spine_data_preparer
 
-    def shift_boxes_using_relative_coordinates(self, boxes, relative_coordinates):
-        pass
+    def put_boxes_on_image(self, img_file, analyzed_dataframe):
+        image = Image.open(img_file)
+        font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
+                                  size=max(np.floor(3e-2 * image.size[1] + 0.5).astype('int32'), 8))
+        thickness = max((image.size[0] + image.size[1]) // 300, 1)
+        for boxes, score in zip(analyzed_dataframe.out_boxes.values, analyzed_dataframe.scores.values):
+            if boxes is not None:
+                for box in boxes:
+                    label = 'Spine {:.2f}'.format(score[0])
+                    draw = ImageDraw.Draw(image)
+                    label_size = draw.textsize(label, font)
 
-    def put_boxes_on_image(self, img_file):
-        pass
+                    top, left, bottom, right = box
+                    top = max(0, np.floor(top + 0.5).astype('int32'))
+                    left = max(0, np.floor(left + 0.5).astype('int32'))
+                    bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
+                    right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
+                    print(label, (left, top), (right, bottom))
+
+                    if top - label_size[1] >= 0:
+                        text_origin = np.array([left, top - label_size[1]])
+                    else:
+                        text_origin = np.array([left, top + 1])
+
+                    for i in range(thickness):
+                        draw.rectangle(
+                            [left + i, top + i, right - i, bottom - i],
+                            outline=(255, 0, 0))
+                    draw.rectangle(
+                        [tuple(text_origin), tuple(text_origin + label_size)],
+                        fill=(255, 0, 0))
+                    draw.text(text_origin, label, fill=(0, 0, 0), font=font)
+                    del draw
+        return image
 
     def train_yolo(self, training_data_to_use=1):
         parsed_training_data = get_lines_from_annotation_file(self.training_data_path)

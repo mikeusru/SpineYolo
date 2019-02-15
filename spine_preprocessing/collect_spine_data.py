@@ -236,10 +236,10 @@ class SpineImageDataPreparer:
         dict_out = dict(bounding_boxes=boxes_in_window, x=x, y=y, scale=self.target_scale_px_per_um,
                         original_scale=self.original_scale)
         if not self.saving:
-            dict_out.update({'window': window.copy()})
+            dict_out.update({'window': Image.fromarray(np.array(window))})
             if self.detector is not None:
-                img_with_boxes, out_boxes, out_scores, out_classes = self.detector.detect_image(window)
-                dict_out.update({'img_with_boxes': img_with_boxes, 'boxes': out_boxes, 'scores': out_scores,
+                img_with_boxes, out_boxes, out_scores, out_classes = self.detector.detect_image(dict_out['window'])
+                dict_out.update({'img_with_boxes': img_with_boxes, 'scores': out_scores, 'out_boxes': out_boxes,
                                  'classes': out_classes})
         row_out = pd.Series(dict_out).rename(window_file_path)
         self.dataframe_out = self.dataframe_out.append(row_out)

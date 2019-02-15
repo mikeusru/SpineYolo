@@ -103,7 +103,6 @@ class YOLO(object):
 
     def detect_image(self, image):
         start = timer()
-
         if self.model_image_size != (None, None):
             assert self.model_image_size[0] % 32 == 0, 'Multiples of 32 required'
             assert self.model_image_size[1] % 32 == 0, 'Multiples of 32 required'
@@ -131,14 +130,15 @@ class YOLO(object):
         font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
                                   size=max(np.floor(3e-2 * image.size[1] + 0.5).astype('int32'), 8))
         thickness = max((image.size[0] + image.size[1]) // 300, 1)
-
+        image_new = Image.new("RGB", image.size)
+        image_new.paste(image)
         for i, c in reversed(list(enumerate(out_classes))):
             predicted_class = self.class_names[c]
             box = out_boxes[i]
             score = out_scores[i]
 
             label = '{} {:.2f}'.format(predicted_class, score)
-            draw = ImageDraw.Draw(image)
+            draw = ImageDraw.Draw(image_new)
             label_size = draw.textsize(label, font)
 
             top, left, bottom, right = box
@@ -166,7 +166,7 @@ class YOLO(object):
 
         end = timer()
         print(end - start)
-        return image, out_boxes, out_scores, out_classes
+        return image_new, out_boxes, out_scores, out_classes
 
     def close_session(self):
         self.sess.close()

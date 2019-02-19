@@ -31,6 +31,7 @@ class SpineImageDataPreparer:
         self.original_scale = None
         self.training_fraction = 0.85
         self.detector = None
+        self.resize_ratio = 1
 
     def set_detector(self, detector):
         self.detector = detector
@@ -188,6 +189,7 @@ class SpineImageDataPreparer:
             scale = float(scale)
         boxes_rescaled = boxes
         resize_scale = self.target_scale_px_per_um / scale
+        self.resize_ratio = resize_scale
         new_shape = np.array(image.shape)
         new_shape[:2] = np.array(new_shape[:2] * resize_scale, dtype=np.int)
         if boxes is not None:
@@ -239,6 +241,10 @@ class SpineImageDataPreparer:
             dict_out.update({'window': Image.fromarray(np.array(window))})
             if self.detector is not None:
                 img_with_boxes, out_boxes, out_scores, out_classes = self.detector.detect_image(dict_out['window'])
+                out_boxes[:, :4] = out_boxes[:, :4] / self.resize_ratio
+                dict_out['x'] = dict_out['x'] / self.resize_ratio
+                dict_out['y'] = dict_out['y'] / self.resize_ratio
+                print(out_boxes)
                 dict_out.update({'img_with_boxes': img_with_boxes, 'scores': out_scores, 'out_boxes': out_boxes,
                                  'classes': out_classes})
         row_out = pd.Series(dict_out).rename(window_file_path)

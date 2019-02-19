@@ -1,6 +1,7 @@
 """
 This is a class for training and evaluating yadk2
 """
+import colorsys
 import os
 
 import numpy as np
@@ -103,6 +104,13 @@ class SpineYolo(object):
         font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
                                   size=max(np.floor(3e-2 * image.size[1] + 0.5).astype('int32'), 8))
         thickness = max((image.size[0] + image.size[1]) // 300, 1)
+        # Generate colors for drawing bounding boxes.
+        hsv_tuples = [(x, 1., 1.)
+                      for x in range(1)]
+        colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
+        colors = list(
+            map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)),
+                colors))
         for boxes, score in zip(analyzed_dataframe.out_boxes.values, analyzed_dataframe.scores.values):
             if boxes is not None:
                 for box in boxes:
@@ -125,10 +133,10 @@ class SpineYolo(object):
                     for i in range(thickness):
                         draw.rectangle(
                             [left + i, top + i, right - i, bottom - i],
-                            outline=(255, 0, 0))
+                            outline=colors[0])
                     draw.rectangle(
                         [tuple(text_origin), tuple(text_origin + label_size)],
-                        fill=(255, 0, 0))
+                        fill=colors[0])
                     draw.text(text_origin, label, fill=(0, 0, 0), font=font)
                     del draw
         return image

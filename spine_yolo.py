@@ -102,19 +102,16 @@ class SpineYolo(object):
     def put_boxes_on_image(self, img_file, analyzed_dataframe):
         image = Image.open(img_file)
         font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
-                                  size=max(np.floor(3e-2 * image.size[1] + 0.5).astype('int32'), 8))
-        thickness = max((image.size[0] + image.size[1]) // 300, 1)
+                                  size=max(np.floor(2e-2 * image.size[1] + 0.5).astype('int32'), 8))
+        thickness = max((image.size[0] + image.size[1]) // 900, 1)
         # Generate colors for drawing bounding boxes.
         hsv_tuples = [(x, 1., 1.)
                       for x in range(1)]
-        colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
-        colors = list(
-            map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)),
-                colors))
+        colors = [(0, 0, 255)]
         for boxes, score in zip(analyzed_dataframe.out_boxes.values, analyzed_dataframe.scores.values):
             if boxes is not None:
                 for box in boxes:
-                    label = 'Spine {:.2f}'.format(score[0])
+                    label = '{:.2f}'.format(score[0])
                     draw = ImageDraw.Draw(image)
                     label_size = draw.textsize(label, font)
 
@@ -134,10 +131,10 @@ class SpineYolo(object):
                         draw.rectangle(
                             [left + i, top + i, right - i, bottom - i],
                             outline=colors[0])
-                    draw.rectangle(
-                        [tuple(text_origin), tuple(text_origin + label_size)],
-                        fill=colors[0])
-                    draw.text(text_origin, label, fill=(0, 0, 0), font=font)
+                    # draw.rectangle(
+                    #     [tuple(text_origin), tuple(text_origin + label_size)],
+                    #     fill=colors[0])
+                    # draw.text(text_origin, label, fill=colors[0], font=font)
                     del draw
         return image
 

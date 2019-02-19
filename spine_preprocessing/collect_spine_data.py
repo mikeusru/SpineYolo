@@ -244,7 +244,6 @@ class SpineImageDataPreparer:
                 out_boxes[:, :4] = out_boxes[:, :4] / self.resize_ratio
                 dict_out['x'] = dict_out['x'] / self.resize_ratio
                 dict_out['y'] = dict_out['y'] / self.resize_ratio
-                print(out_boxes)
                 dict_out.update({'img_with_boxes': img_with_boxes, 'scores': out_scores, 'out_boxes': out_boxes,
                                  'classes': out_classes})
         row_out = pd.Series(dict_out).rename(window_file_path)

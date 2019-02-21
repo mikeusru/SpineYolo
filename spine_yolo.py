@@ -2,6 +2,7 @@
 This is a class for training and evaluating yadk2
 """
 import colorsys
+import csv
 import os
 
 import numpy as np
@@ -110,32 +111,33 @@ class SpineYolo(object):
         colors = [(0, 0, 255)]
         for boxes, score in zip(analyzed_dataframe.out_boxes.values, analyzed_dataframe.scores.values):
             if boxes is not None:
-                for box in boxes:
-                    label = '{:.2f}'.format(score[0])
-                    draw = ImageDraw.Draw(image)
-                    label_size = draw.textsize(label, font)
+                with open('boxes_predicted.txt', mode='w') as csv_file:
+                    box_score_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                    for box in boxes:
+                        label = '{:.2f}'.format(score[0])
+                        draw = ImageDraw.Draw(image)
+                        label_size = draw.textsize(label, font)
+                        top, left, bottom, right = box
+                        top = max(0, np.floor(top + 0.5).astype('int32'))
+                        left = max(0, np.floor(left + 0.5).astype('int32'))
+                        bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
+                        right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
+                        print(label, (left, top), (right, bottom))
+                        box_score_writer.writerow([left, top, bottom, right, score])
+                        if top - label_size[1] >= 0:
+                            text_origin = np.array([left, top - label_size[1]])
+                        else:
+                            text_origin = np.array([left, top + 1])
 
-                    top, left, bottom, right = box
-                    top = max(0, np.floor(top + 0.5).astype('int32'))
-                    left = max(0, np.floor(left + 0.5).astype('int32'))
-                    bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
-                    right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
-                    print(label, (left, top), (right, bottom))
-
-                    if top - label_size[1] >= 0:
-                        text_origin = np.array([left, top - label_size[1]])
-                    else:
-                        text_origin = np.array([left, top + 1])
-
-                    for i in range(thickness):
-                        draw.rectangle(
-                            [left + i, top + i, right - i, bottom - i],
-                            outline=colors[0])
-                    # draw.rectangle(
-                    #     [tuple(text_origin), tuple(text_origin + label_size)],
-                    #     fill=colors[0])
-                    # draw.text(text_origin, label, fill=colors[0], font=font)
-                    del draw
+                        for i in range(thickness):
+                            draw.rectangle(
+                                [left + i, top + i, right - i, bottom - i],
+                                outline=colors[0])
+                        # draw.rectangle(
+                        #     [tuple(text_origin), tuple(text_origin + label_size)],
+                        #     fill=colors[0])
+                        # draw.text(text_origin, label, fill=colors[0], font=font)
+                        del draw
         return image
 
     def train_yolo(self, training_data_to_use=1):
@@ -144,7 +146,7 @@ class SpineYolo(object):
         training_samples = round(len(parsed_training_data) * training_data_to_use)
         parsed_training_data = parsed_training_data[:training_samples]
         if training_data_to_use != 1:
-            self.set_log_dir(os.path.join('logs', 'training_samples_{}'.format(training_samples)))
+            self.set_log_dir(os.path.join(self.log_dir, 'training_samples_{}'.format(training_samples)))
         train_spine_yolo(parsed_training_data, parsed_validation_data, self.log_dir, self.classes_path,
                          self.anchors_path, self.model_path)
 

@@ -92,7 +92,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
                                                                    num_classes),
                             validation_steps=max(1, num_val // batch_size),
                             epochs=1000,
-                            initial_epoch=10,
+                            initial_epoch=20,
                             callbacks=[logging, checkpoint, reduce_lr, early_stopping])
         model.save_weights(os.path.join(log_dir, 'trained_weights_final.h5'))
 

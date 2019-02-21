@@ -128,7 +128,7 @@ class YOLO(object):
         print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
 
         font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
-                                  size=max(np.floor(3e-2 * image.size[1] + 0.5).astype('int32'), 8))
+                                  size=max(np.floor(3e-2 * image.size[1] + 0.5).astype('int32'), 12))
         thickness = max((image.size[0] + image.size[1]) // 300, 1)
         image_new = Image.new("RGB", image.size)
         image_new.paste(image)
@@ -137,7 +137,8 @@ class YOLO(object):
             box = out_boxes[i]
             score = out_scores[i]
 
-            label = '{} {:.2f}'.format(predicted_class, score)
+            # label = '{} {:.2f}'.format(predicted_class, score)
+            label = '{:.2f}'.format(score)
             draw = ImageDraw.Draw(image_new)
             label_size = draw.textsize(label, font)
 

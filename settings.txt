@@ -1,4 +1,4 @@
 training_data_path = data\sliding_window_images\
 trained_model_path = model_data\yolo_spines.h5
 train_test_split = .8
-log_dir = logs\006
+log_dir = logs\training_from_yolo_with_all_hippocampals

@@ -102,17 +102,19 @@ class SpineYolo(object):
 
     def put_boxes_on_image(self, img_file, analyzed_dataframe):
         image = Image.open(img_file)
+        image = Image.fromarray(np.array(image).astype(np.float) / np.array(image).max() * 255).convert("L").convert("RGB")
+        # image = Image.open(img_file).convert("L").convert("RGB")
         font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
                                   size=max(np.floor(2e-2 * image.size[1] + 0.5).astype('int32'), 8))
-        thickness = max((image.size[0] + image.size[1]) // 900, 1)
+        thickness = max((image.size[0] + image.size[1]) // 1800, 1)
         # Generate colors for drawing bounding boxes.
         hsv_tuples = [(x, 1., 1.)
                       for x in range(1)]
-        colors = [(0, 0, 255)]
-        for boxes, score in zip(analyzed_dataframe.out_boxes.values, analyzed_dataframe.scores.values):
-            if boxes is not None:
-                with open('boxes_predicted.txt', mode='w') as csv_file:
-                    box_score_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        colors = [(255, 0, 0)]
+        with open('boxes_predicted.txt', mode='w') as csv_file:
+            box_score_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            for boxes, score in zip(analyzed_dataframe.out_boxes.values, analyzed_dataframe.scores.values):
+                if boxes is not None:
                     for box in boxes:
                         label = '{:.2f}'.format(score[0])
                         draw = ImageDraw.Draw(image)

@@ -106,6 +106,26 @@ class SpineImageDataPreparer:
         if self.resize_to_scale:
             self.process_individual_row(self.dataframe.iloc[0], '')
 
+    def remove_overlapping_boxes(self, iou_thresh=0.45):
+        boxes_scores = []
+        for boxes, scores in zip(self.dataframe_out.out_boxes.values, self.dataframe_out.scores.values):
+            for box, score in zip(boxes, scores):
+                boxes_scores.append(np.append(box, score))
+        print('\n\n\n')
+        boxes_scores = np.array(boxes_scores)
+        ind = np.argsort(-boxes_scores[:, 4])
+        boxes_scores_sorted = boxes_scores[ind, :]
+        counter = 0
+        while True:
+            if counter >= boxes_scores_sorted.shape[0]:
+                break
+            iou = self.calc_iou(boxes_scores_sorted[counter, :4], boxes_scores_sorted[counter + 1:, :4])
+            mask = np.ones(boxes_scores_sorted.shape[0], dtype=bool)
+            mask[counter+1:][iou > iou_thresh] = False
+            boxes_scores_sorted = boxes_scores_sorted[mask]
+            counter += 1
+        return boxes_scores_sorted
+
     def create_dataframe(self):
         self.get_image_file_dict()
         self.dataframe = pd.DataFrame.from_dict(self.initial_image_file_dict, orient='index')
@@ -293,10 +313,37 @@ class SpineImageDataPreparer:
 
         return box_strings
 
-    def write_image(self, path, image):
+    @staticmethod
+    def write_image(path, image):
         image_to_write = Image.fromarray(image)
         image_to_write.save(path)
 
+    @staticmethod
+    def calc_iou(boxA, boxB):
+        # make sure boxB is a two-dimensional array
+        if len(boxB.shape) == 1:
+            boxB = np.expand_dims(boxB, axis=0)
+        # determine the (x, y)-coordinates of the intersection rectangle
+        # box is top left bottom right
+        # or more like bottom left top right... just works out this way bc image is flipped or something
+        xA = np.maximum(boxA[1], boxB[:, 1])
+        yA = np.maximum(boxA[0], boxB[:, 0])
+        xB = np.minimum(boxA[3], boxB[:, 3])
+        yB = np.minimum(boxA[2], boxB[:, 2])
+
+        # compute the area of intersection rectangle
+        interArea = np.maximum(0, xB - xA + 1) * np.maximum(0, yB - yA + 1)
+
+        # compute the area of both rectangles
+        boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
+        boxBArea = (boxB[:, 2] - boxB[:, 0] + 1) * (boxB[:, 3] - boxB[:, 1] + 1)
+
+        # compute the intersection over union by taking the intersection
+        # area and dividing it by the sum of prediction + ground-truth
+        # areas - the interesection area
+        iou = interArea / (boxAArea + boxBArea - interArea)
+
+        return iou
 
 if __name__ == '__main__':
     app = SpineImageDataPreparer()

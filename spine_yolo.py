@@ -65,13 +65,8 @@ class SpineYolo(object):
                 scale = float(line_list[scale_ind])
                 spine_data_preparer = self.split_and_detect(img_file, scale)
                 spine_data_preparer.dataframe_out = spine_data_preparer.dataframe_out.apply(self.shift_boxes, axis=1)
-                # for row in spine_data_preparer.dataframe_out:
-                #     if row.boxes.size > 0:
-                #         for box, score in zip(row.boxes, row.scores):
-                #             box[[0, 2]] += row.y
-                #             box[[1, 3]] += row.x
-                #             boxes_shifted_and_scores.append((box, score))
-                r_image = self.put_boxes_on_image(img_file, spine_data_preparer.dataframe_out)
+                non_overlapping_boxes = spine_data_preparer.remove_overlapping_boxes()
+                r_image = self.put_boxes_on_image(img_file, non_overlapping_boxes)
                 r_image.show()
             else:
                 try:
@@ -100,9 +95,10 @@ class SpineYolo(object):
         spine_data_preparer.run_on_single_image(img_file, scale)
         return spine_data_preparer
 
-    def put_boxes_on_image(self, img_file, analyzed_dataframe):
+    def put_boxes_on_image(self, img_file, boxes_scores):
         image = Image.open(img_file)
-        image = Image.fromarray(np.array(image).astype(np.float) / np.array(image).max() * 255).convert("L").convert("RGB")
+        image = Image.fromarray(np.array(image).astype(np.float) / np.array(image).max() * 255).convert("L").convert(
+            "RGB")
         # image = Image.open(img_file).convert("L").convert("RGB")
         font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
                                   size=max(np.floor(2e-2 * image.size[1] + 0.5).astype('int32'), 8))
@@ -111,35 +107,37 @@ class SpineYolo(object):
         hsv_tuples = [(x, 1., 1.)
                       for x in range(1)]
         colors = [(255, 0, 0)]
+        if len(boxes_scores.shape) == 1:
+            boxes_scores = np.expand_dims(boxes_scores, axis=0)
         with open('boxes_predicted.txt', mode='w') as csv_file:
             box_score_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            for boxes, score in zip(analyzed_dataframe.out_boxes.values, analyzed_dataframe.scores.values):
-                if boxes is not None:
-                    for box in boxes:
-                        label = '{:.2f}'.format(score[0])
-                        draw = ImageDraw.Draw(image)
-                        label_size = draw.textsize(label, font)
-                        top, left, bottom, right = box
-                        top = max(0, np.floor(top + 0.5).astype('int32'))
-                        left = max(0, np.floor(left + 0.5).astype('int32'))
-                        bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
-                        right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
-                        print(label, (left, top), (right, bottom))
-                        box_score_writer.writerow([left, top, bottom, right, score])
-                        if top - label_size[1] >= 0:
-                            text_origin = np.array([left, top - label_size[1]])
-                        else:
-                            text_origin = np.array([left, top + 1])
+            for box_score in boxes_scores:
+                box = box_score[:4]
+                score = box_score[4]
+                label = '{:.2f}'.format(score)
+                draw = ImageDraw.Draw(image)
+                label_size = draw.textsize(label, font)
+                top, left, bottom, right = box
+                top = max(0, np.floor(top + 0.5).astype('int32'))
+                left = max(0, np.floor(left + 0.5).astype('int32'))
+                bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
+                right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
+                print(label, (left, top), (right, bottom))
+                box_score_writer.writerow([left, top, bottom, right, score])
+                if top - label_size[1] >= 0:
+                    text_origin = np.array([left, top - label_size[1]])
+                else:
+                    text_origin = np.array([left, top + 1])
 
-                        for i in range(thickness):
-                            draw.rectangle(
-                                [left + i, top + i, right - i, bottom - i],
-                                outline=colors[0])
-                        # draw.rectangle(
-                        #     [tuple(text_origin), tuple(text_origin + label_size)],
-                        #     fill=colors[0])
-                        # draw.text(text_origin, label, fill=colors[0], font=font)
-                        del draw
+                for i in range(thickness):
+                    draw.rectangle(
+                        [left + i, top + i, right - i, bottom - i],
+                        outline=colors[0])
+                # draw.rectangle(
+                #     [tuple(text_origin), tuple(text_origin + label_size)],
+                #     fill=colors[0])
+                # draw.text(text_origin, label, fill=colors[0], font=font)
+                del draw
         return image
 
     def train_yolo(self, training_data_to_use=1):

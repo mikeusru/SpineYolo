@@ -169,8 +169,8 @@ class SpineImageDataPreparer:
 
     def load_image(self, img_file):
         image = np.array(Image.open(img_file))
-        # dtype_max = np.iinfo(image.dtype).max
-        dtype_max = image.max()
+        dtype_max = np.iinfo(image.dtype).max
+        # dtype_max = image.max()
         image = (image.astype(np.float32) / dtype_max * 255).astype(np.uint8)
         self.temp_loaded_image = image
 

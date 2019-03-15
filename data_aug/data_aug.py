@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import sys
 import os
 from data_aug.bbox_util import *
-from skimage import transform
+from skimage import transform, exposure
 
 lib_path = os.path.join(os.path.realpath("."), "data_aug")
 sys.path.append(lib_path)
@@ -506,6 +506,39 @@ class Rotate(object):
 
         return img, bboxes
 
+
+class RandomContrastStretch(object):
+
+    def __init__(self, p=0.5):
+        self.p = p
+
+    def __call__(self, img, bboxes):
+        if random.random() < self.p:
+            p2, p98 = np.percentile(img, (2, 98))
+            img = exposure.rescale_intensity(img, in_range=(p2, p98))
+        return img, bboxes
+
+
+class RandomHistogramEqualization(object):
+
+    def __init__(self, p=0.5):
+        self.p = p
+
+    def __call__(self, img, bboxes):
+        if random.random() < self.p:
+            img = exposure.equalize_hist(img)
+        return img, bboxes
+
+
+class RandomAdaptiveHistogramEqualization(object):
+
+    def __init__(self, p=0.5):
+        self.p = p
+
+    def __call__(self, img, bboxes):
+        if random.random() < self.p:
+            img = exposure.equalize_adapthist(img, clip_limit=0.03)
+        return img, bboxes
 
 class RandomShear(object):
     """Randomly shears an image in horizontal direction   

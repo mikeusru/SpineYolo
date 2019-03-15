@@ -84,6 +84,18 @@ def do_data_augmentation(annotation_line, input_shape, max_boxes=20):
             # show_image_transformation(image_data_transformed, box_transformed)
             if len(box_transformed) == 0:
                 continue
+            image_data_transformed, box_transformed = RandomContrastStretch(.3)(image_data.copy(), box.copy())
+            # show_image_transformation(image_data_transformed, box_transformed)
+            if len(box_transformed) == 0:
+                continue
+            image_data_transformed, box_transformed = RandomHistogramEqualization(.3)(image_data.copy(), box.copy())
+            # show_image_transformation(image_data_transformed, box_transformed)
+            if len(box_transformed) == 0:
+                continue
+            image_data_transformed, box_transformed = RandomAdaptiveHistogramEqualization(.3)(image_data.copy(), box.copy())
+            # show_image_transformation(image_data_transformed, box_transformed)
+            if len(box_transformed) == 0:
+                continue
             image_data_transformed, box_transformed = RandomScale(.3, diff=True)(image_data_transformed.copy(),
                                                                                  box_transformed.copy())
             # show_image_transformation(image_data_transformed, box_transformed)

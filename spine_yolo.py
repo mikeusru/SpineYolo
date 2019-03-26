@@ -3,6 +3,7 @@ This is a class for training and evaluating yadk2
 """
 import colorsys
 import csv
+import ntpath
 import os
 
 import numpy as np
@@ -109,8 +110,11 @@ class SpineYolo(object):
         colors = [(255, 0, 0)]
         if len(boxes_scores.shape) == 1:
             boxes_scores = np.expand_dims(boxes_scores, axis=0)
-        with open('boxes_predicted.txt', mode='w') as csv_file:
-            box_score_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        if not os.path.exists('detections'):
+            os.mkdir('detections')
+        predictions_file = os.path.join('detections', ntpath.basename(img_file) + '.txt')
+        with open(predictions_file, mode='w') as detections_file_writer:
+            # box_score_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             for box_score in boxes_scores:
                 box = box_score[:4]
                 score = box_score[4]
@@ -123,7 +127,7 @@ class SpineYolo(object):
                 bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
                 right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
                 print(label, (left, top), (right, bottom))
-                box_score_writer.writerow([left, top, bottom, right, score])
+                detections_file_writer.write('{} {:.4f} {} {} {} {}\n'.format('Spine', score, left, top, right, bottom))
                 if top - label_size[1] >= 0:
                     text_origin = np.array([left, top - label_size[1]])
                 else:

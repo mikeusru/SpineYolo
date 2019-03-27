@@ -19,5 +19,5 @@ for line in lines:
     ground_truths_file_path = os.path.join('groundtruths', ntpath.split(path)[1] + '_' + file + '.txt')
     with open(ground_truths_file_path, 'w') as f:
         for box in bounding_boxes:
-            top, left, bottom, right = box[0], box[1], box[2], box[3]
-            f.write('{} {} {} {} {}\n'.format('Spine', left, top, right, bottom))
+            x, y, r, b = box[0], box[1], box[2], box[3]
+            f.write('{} {} {} {} {}\n'.format('Spine', x, y, r, b))

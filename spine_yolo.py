@@ -72,8 +72,9 @@ class SpineYolo(object):
             else:
                 try:
                     image = Image.open(img_file)
-                    r_image, _, _, _ = self.yolo_detector.detect_image(image)
-                    r_image.show()
+                    r_image, boxes, scores, _ = self.yolo_detector.detect_image(image)
+                    self.save_boxes_to_file(img_file, boxes, scores)
+                    # r_image.show()
                 except:
                     print('Couldn''t load image file: {}'.format(img_file))
                     continue
@@ -108,41 +109,53 @@ class SpineYolo(object):
         hsv_tuples = [(x, 1., 1.)
                       for x in range(1)]
         colors = [(255, 0, 0)]
+        boxes = []
+        scores = []
         if len(boxes_scores.shape) == 1:
             boxes_scores = np.expand_dims(boxes_scores, axis=0)
+        for box_score in boxes_scores:
+            box = box_score[:4]
+            score = box_score[4]
+            boxes.append(box)
+            scores.append(score)
+            label = '{:.2f}'.format(score)
+            draw = ImageDraw.Draw(image)
+            label_size = draw.textsize(label, font)
+            top, left, bottom, right = box
+            top = max(0, np.floor(top + 0.5).astype('int32'))
+            left = max(0, np.floor(left + 0.5).astype('int32'))
+            bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
+            right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
+            print(label, (left, top), (right, bottom))
+            if top - label_size[1] >= 0:
+                text_origin = np.array([left, top - label_size[1]])
+            else:
+                text_origin = np.array([left, top + 1])
+
+            for i in range(thickness):
+                draw.rectangle(
+                    [left + i, top + i, right - i, bottom - i],
+                    outline=colors[0])
+            # draw.rectangle(
+            #     [tuple(text_origin), tuple(text_origin + label_size)],
+            #     fill=colors[0])
+            # draw.text(text_origin, label, fill=colors[0], font=font)
+            del draw
+        self.save_boxes_to_file(img_file, boxes, scores)
+        return image
+
+    @staticmethod
+    def save_boxes_to_file(img_file, boxes, scores):
         if not os.path.exists('detections'):
             os.mkdir('detections')
-        predictions_file = os.path.join('detections', ntpath.basename(img_file) + '.txt')
+        file_path, file_basename = ntpath.split(img_file)
+        if file_basename[:6] == 'window':
+            file_basename = ntpath.split(file_path)[1] + '_' + file_basename
+        predictions_file = os.path.join('detections', file_basename + '.txt')
         with open(predictions_file, mode='w') as detections_file_writer:
-            # box_score_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            for box_score in boxes_scores:
-                box = box_score[:4]
-                score = box_score[4]
-                label = '{:.2f}'.format(score)
-                draw = ImageDraw.Draw(image)
-                label_size = draw.textsize(label, font)
+            for box, score in zip(boxes, scores):
                 top, left, bottom, right = box
-                top = max(0, np.floor(top + 0.5).astype('int32'))
-                left = max(0, np.floor(left + 0.5).astype('int32'))
-                bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
-                right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
-                print(label, (left, top), (right, bottom))
-                detections_file_writer.write('{} {:.4f} {} {} {} {}\n'.format('Spine', score, left, top, right, bottom))
-                if top - label_size[1] >= 0:
-                    text_origin = np.array([left, top - label_size[1]])
-                else:
-                    text_origin = np.array([left, top + 1])
-
-                for i in range(thickness):
-                    draw.rectangle(
-                        [left + i, top + i, right - i, bottom - i],
-                        outline=colors[0])
-                # draw.rectangle(
-                #     [tuple(text_origin), tuple(text_origin + label_size)],
-                #     fill=colors[0])
-                # draw.text(text_origin, label, fill=colors[0], font=font)
-                del draw
-        return image
+                detections_file_writer.write('{} {:.4f} {:.0f} {:.0f} {:.0f} {:.0f}\n'.format('Spine', score, left, top, right, bottom))
 
     def train_yolo(self, training_data_to_use=1):
         parsed_training_data = get_lines_from_annotation_file(self.training_data_path)

@@ -47,7 +47,8 @@ class SpineYolo(object):
                 print('Open Error! Try again!')
                 continue
             else:
-                r_image, _, _, _ = self.yolo_detector.detect_image(image)
+                r_image, boxes, scores, _ = self.yolo_detector.detect_image(image)
+                self.save_boxes_to_file(img_path, boxes, scores)
                 r_image.show()
         self.yolo_detector.close_session()
 
@@ -99,7 +100,8 @@ class SpineYolo(object):
 
     def put_boxes_on_image(self, img_file, boxes_scores):
         image = Image.open(img_file)
-        image = Image.fromarray(np.array(image).astype(np.float) / np.array(image).max() * 255).convert("L").convert(
+        image = Image.fromarray(
+            (np.array(image).astype(np.float) / np.array(image).max() * 255).astype(np.uint8)).convert("L").convert(
             "RGB")
         # image = Image.open(img_file).convert("L").convert("RGB")
         font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
@@ -155,7 +157,8 @@ class SpineYolo(object):
         with open(predictions_file, mode='w') as detections_file_writer:
             for box, score in zip(boxes, scores):
                 top, left, bottom, right = box
-                detections_file_writer.write('{} {:.4f} {:.0f} {:.0f} {:.0f} {:.0f}\n'.format('Spine', score, left, top, right, bottom))
+                detections_file_writer.write(
+                    '{} {:.4f} {:.0f} {:.0f} {:.0f} {:.0f}\n'.format('Spine', score, left, top, right, bottom))
 
     def train_yolo(self, training_data_to_use=1):
         parsed_training_data = get_lines_from_annotation_file(self.training_data_path)
@@ -179,11 +182,12 @@ class SpineYolo(object):
     def set_model_path(self, path):
         self.model_path = path
 
-    def prepare_image_data(self, images_path, is_labeled=False, train_test_split=0.8):
+    def prepare_image_data(self, images_path, is_labeled=False, train_test_split=0.8, image_data_out_path=None):
         spine_data_preparer = SpineImageDataPreparer()
         spine_data_preparer.set_initial_directory(images_path)
         spine_data_preparer.set_labeled_state(is_labeled)
         spine_data_preparer.set_train_test_split(train_test_split)
+        spine_data_preparer.set_save_directory(image_data_out_path)
         spine_data_preparer.run()
 
 

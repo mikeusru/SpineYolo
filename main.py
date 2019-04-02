@@ -21,6 +21,7 @@ class SpineYoloGui(tk.Tk):
         self.trained_model_path = tk.StringVar()
         self.train_test_split = tk.StringVar()
         self.log_dir = tk.StringVar()
+        self.image_data_out_path = None
         self.load_settings()
         self.gui = self.define_gui_elements()
 
@@ -85,7 +86,8 @@ class SpineYoloGui(tk.Tk):
     def prepare_training_data(self):
         self.spine_yolo.prepare_image_data(self.training_data_path.get(),
                                            is_labeled=True,
-                                           train_test_split=self.train_test_split.get())
+                                           train_test_split=self.train_test_split.get(),
+                                           image_data_out_path=self.image_data_out_path)
 
     def select_model(self):
         path = askopenfilename(initialdir=self.trained_model_path.get(),
@@ -116,6 +118,7 @@ class SpineYoloGui(tk.Tk):
         settings_dict = {}
         for line in lines:
             settings_dict[line[0]] = line[2]
+        self.image_data_out_path = settings_dict['image_data_out_path']
         self.training_data_path.set(settings_dict['training_data_path'])
         self.trained_model_path.set(settings_dict['trained_model_path'])
         self.train_test_split.set(settings_dict['train_test_split'])

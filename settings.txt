@@ -1,4 +1,5 @@
-training_data_path = data\sliding_window_images\
+training_data_path = data\hippocampal_visual_purkinje_combined\
 trained_model_path = model_data\yolov3_spines_hist_adjusted.h5
 train_test_split = .8
-log_dir = logs\random_histogram_adjustments
+log_dir = logs\combined_cell_types
+image_data_out_path = data\purkinje_windows

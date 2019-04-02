@@ -62,13 +62,18 @@ optional arguments:
 1. Generate your own annotation file and class names file.  
     One row for one image;  
     Row format: `image_file_path box1 box2 ... boxN`;  
-    Box format: `x_min,y_min,x_max,y_max,class_id` (no space).  
+    Box format: `x_min,y_min,x_max,y_max,0` (no space).  
     Here is an example:
     ```
-    path/to/img1.jpg 50,100,150,200,0 30,50,200,120,3
-    path/to/img2.jpg 120,300,250,600,2
+    path/to/img1.jpg 50,100,150,200,0 30,50,200,120,0
+    path/to/img2.jpg 120,300,250,600,0
     ...
     ```
+    
+    Training data can be prepared easily using our MATLAB tool, [Braintown](https://github.com/mikeusru/Braintown).
+    Watch the tutorial here:
+    https://youtu.be/H1nF8Uyt5o8
+    
 
 3. Run main.py, set the model you want to use, and start training.  
     `python main.py `  

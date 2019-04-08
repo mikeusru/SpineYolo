@@ -26,14 +26,22 @@ BOXES_INPUT = Input(shape=(None, 5))
 
 class SpineYolo(object):
 
-    def __init__(self, _args):
+    def __init__(self, _args=None):
+        self.training_data_path = '.'
+        self.validation_data_path = '.'
+        self.classes_path = '.'
+        self.anchors_path = '.'
+        self.model_path = '.'
+        if _args is not None:
+            self.set_args(_args)
+        self.log_dir = os.path.join('logs', '000')
+        self.yolo_detector = None
+
+    def _set_args(self, _args):
         self.training_data_path = os.path.expanduser(_args.train_data_path)
         self.validation_data_path = os.path.expanduser(_args.val_data_path)
         self.classes_path = os.path.expanduser(_args.classes_path)
         self.anchors_path = os.path.expanduser(_args.anchors_path)
-        self.model_path = os.path.expanduser(_args.model_path)
-        self.log_dir = os.path.join('logs', '000')
-        self.yolo_detector = None
 
     def detect_input_images(self):
         while True:

@@ -36,6 +36,7 @@ class SpineYolo(object):
             self.set_args(_args)
         self.log_dir = os.path.join('logs', '000')
         self.yolo_detector = None
+        self.r_images = []
 
     def _set_args(self, _args):
         self.training_data_path = os.path.expanduser(_args.train_data_path)
@@ -44,25 +45,31 @@ class SpineYolo(object):
         self.anchors_path = os.path.expanduser(_args.anchors_path)
 
     def detect_input_images(self):
+        r_images = []
         while True:
             img_path = input('Input image or image list filename:')
             if os.path.splitext(img_path)[1] == '.txt':
-                self.detect_images_from_file_list(img_path)
+                r_images = [r_image for r_image in self.detect_images_from_file_list(img_path)]
                 break
             try:
-                image = Image.open(img_path)
+                r_images.append(Image.open(img_path))
             except:
                 print('Open Error! Try again!')
                 continue
             else:
                 r_image, boxes, scores, _ = self.yolo_detector.detect_image(image)
                 self.save_boxes_to_file(img_path, boxes, scores)
-                r_image.show()
+                r_images.append(r_image)
+                # r_image.show()
         self.yolo_detector.close_session()
+        self.r_images = r_images
 
     def detect(self):
         self.yolo_detector = YOLO(**{"model_path": self.model_path})
         self.detect_input_images()
+
+    def get_output_images(self):
+        return self.r_images
 
     def detect_images_from_file_list(self, img_path):
         with open(img_path) as f:
@@ -78,11 +85,13 @@ class SpineYolo(object):
                 non_overlapping_boxes = spine_data_preparer.remove_overlapping_boxes()
                 r_image = self.put_boxes_on_image(img_file, non_overlapping_boxes)
                 r_image.show()
+                yield r_image
             else:
                 try:
                     image = Image.open(img_file)
                     r_image, boxes, scores, _ = self.yolo_detector.detect_image(image)
                     self.save_boxes_to_file(img_file, boxes, scores)
+                    yield r_image
                     # r_image.show()
                 except:
                     print('Couldn''t load image file: {}'.format(img_file))

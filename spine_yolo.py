@@ -44,29 +44,35 @@ class SpineYolo(object):
         self.classes_path = os.path.expanduser(_args.classes_path)
         self.anchors_path = os.path.expanduser(_args.anchors_path)
 
-    def detect_input_images(self):
+    def detect_input_images(self, img):
         r_images = []
         while True:
-            img_path = input('Input image or image list filename:')
-            if os.path.splitext(img_path)[1] == '.txt':
-                r_images = [r_image for r_image in self.detect_images_from_file_list(img_path)]
-                break
-            try:
-                r_images.append(Image.open(img_path))
-            except:
-                print('Open Error! Try again!')
-                continue
-            else:
+            if img is not None:
                 r_image, boxes, scores, _ = self.yolo_detector.detect_image(image)
-                self.save_boxes_to_file(img_path, boxes, scores)
-                r_images.append(r_image)
-                # r_image.show()
+                r_images = [r_image]
+                self.r_images = r_images
+            else:
+
+                img_path = input('Input image or image list filename:')
+                if os.path.splitext(img_path)[1] == '.txt':
+                    r_images = [r_image for r_image in self.detect_images_from_file_list(img_path)]
+                    break
+                try:
+                    r_images.append(Image.open(img_path))
+                except:
+                    print('Open Error! Try again!')
+                    continue
+                else:
+                    r_image, boxes, scores, _ = self.yolo_detector.detect_image(image)
+                    self.save_boxes_to_file(img_path, boxes, scores)
+                    r_images.append(r_image)
+                    # r_image.show()
         self.yolo_detector.close_session()
         self.r_images = r_images
 
-    def detect(self):
+    def detect(self, img=None):
         self.yolo_detector = YOLO(**{"model_path": self.model_path})
-        self.detect_input_images()
+        self.detect_input_images(img)
 
     def get_output_images(self):
         return self.r_images

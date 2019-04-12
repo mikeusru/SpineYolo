@@ -10,5 +10,5 @@ def home():
     # Create form
     form = ReusableForm(request.form)
 
-    # Send template information to index.html
+    # Send templates information to index.html
     return render_template('index.html', form=form)

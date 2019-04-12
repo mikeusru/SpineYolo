@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SpineYOLO</title>
+</head>
+<body>
+
+<h2>SpineYOLO!!!</h2>
+
+
+<div class="'ml-container">
+
+    <form action="{{ url_for('predict') }}" method="POST">
+        <p> Enter Scale in pixels/um</p>
+        <textarea name="scale" rows="1" cols="50"></textarea>
+        <br/>
+
+        <input type="submit" class="btn-info" value="predict">
+    </form>
+</div>
+
+</body>
+</html>

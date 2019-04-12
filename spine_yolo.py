@@ -11,8 +11,8 @@ from PIL import Image, ImageFont, ImageDraw
 from keras.layers import Input
 
 from spine_preprocessing.collect_spine_data import SpineImageDataPreparer
-from train import train_spine_yolo, get_lines_from_annotation_file
 from yolo import YOLO
+from spine_yolo_train import train_spine_yolo, get_lines_from_annotation_file
 from yolo_argparser import YoloArgparse
 
 # Default anchor boxes
@@ -37,6 +37,7 @@ class SpineYolo(object):
         self.log_dir = os.path.join('logs', '000')
         self.yolo_detector = None
         self.r_images = []
+        self.r_boxes = []
 
     def _set_args(self, _args):
         self.training_data_path = os.path.expanduser(_args.train_data_path)
@@ -46,11 +47,14 @@ class SpineYolo(object):
 
     def detect_input_images(self, img):
         r_images = []
+        r_boxes = []
         while True:
             if img is not None:
-                r_image, boxes, scores, _ = self.yolo_detector.detect_image(image)
+                r_image, boxes, scores, _ = self.yolo_detector.detect_image(img)
                 r_images = [r_image]
+                r_boxes = [boxes]
                 self.r_images = r_images
+                self.r_boxes = r_boxes
             else:
 
                 img_path = input('Input image or image list filename:')
@@ -66,9 +70,11 @@ class SpineYolo(object):
                     r_image, boxes, scores, _ = self.yolo_detector.detect_image(image)
                     self.save_boxes_to_file(img_path, boxes, scores)
                     r_images.append(r_image)
+                    r_boxes.append(boxes)
                     # r_image.show()
         self.yolo_detector.close_session()
         self.r_images = r_images
+        self.r_boxes = r_boxes
 
     def detect(self, img=None):
         self.yolo_detector = YOLO(**{"model_path": self.model_path})

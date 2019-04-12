@@ -20,7 +20,7 @@ def home():
     # On form entry and all conditions met
     if request.method == 'POST' and form.validate():
         # Extract information
-        scale = int(request.form['words'])
+        scale = int(request.form['scale'])
         # Generate results
         sp = SpineYolo()
         sp.set_model_path('model_data/yolov3_spines_combined.h5')
@@ -28,7 +28,7 @@ def home():
         r_image = sp.r_images[0]
         return render_template('spines_found.html', r_image=r_image)
 
-    # Send template information to index.html
+    # Send templates information to index.html
     return render_template('index.html', form=form)
 
 def get_image():

@@ -45,40 +45,42 @@ class SpineYolo(object):
         self.classes_path = os.path.expanduser(_args.classes_path)
         self.anchors_path = os.path.expanduser(_args.anchors_path)
 
-    def detect_input_images(self, img):
+    def detect_input_images(self):
         r_images = []
         r_boxes = []
         while True:
-            if img is not None:
-                r_image, boxes, scores, _ = self.yolo_detector.detect_image(img)
-                r_images = [r_image]
-                r_boxes = [boxes]
-                self.r_images = r_images
-                self.r_boxes = r_boxes
+            img_path = input('Input image or image list filename:')
+            if os.path.splitext(img_path)[1] == '.txt':
+                r_images = [r_image for r_image in self.detect_images_from_file_list(img_path)]
+                break
+            try:
+                r_images.append(Image.open(img_path))
+            except:
+                print('Open Error! Try again!')
+                continue
             else:
-
-                img_path = input('Input image or image list filename:')
-                if os.path.splitext(img_path)[1] == '.txt':
-                    r_images = [r_image for r_image in self.detect_images_from_file_list(img_path)]
-                    break
-                try:
-                    r_images.append(Image.open(img_path))
-                except:
-                    print('Open Error! Try again!')
-                    continue
-                else:
-                    r_image, boxes, scores, _ = self.yolo_detector.detect_image(image)
-                    self.save_boxes_to_file(img_path, boxes, scores)
-                    r_images.append(r_image)
-                    r_boxes.append(boxes)
-                    # r_image.show()
+                r_image, boxes, scores, _ = self.yolo_detector.detect_image(image)
+                self.save_boxes_to_file(img_path, boxes, scores)
+                r_images.append(r_image)
+                r_boxes.append(boxes)
+                # r_image.show()
         self.yolo_detector.close_session()
         self.r_images = r_images
         self.r_boxes = r_boxes
 
-    def detect(self, img=None):
+    def set_detector(self):
         self.yolo_detector = YOLO(**{"model_path": self.model_path})
-        self.detect_input_images(img)
+
+    def detect(self, img_path=None, scale=None):
+        if img_path is not None:
+            r_image, r_boxes = self.analyze_image_with_scale(img_path, scale)
+            self.r_boxes = r_boxes
+            self.r_images = [r_image]
+            # self.yolo_detector.close_session()
+        else:
+            self.yolo_detector = YOLO(**{"model_path": self.model_path})
+            self.detect_input_images()
+
 
     def get_output_images(self):
         return self.r_images
@@ -92,10 +94,7 @@ class SpineYolo(object):
             if 'Scale' in line_list:
                 scale_ind = line_list.index('Scale') + 1
                 scale = float(line_list[scale_ind])
-                spine_data_preparer = self.split_and_detect(img_file, scale)
-                spine_data_preparer.dataframe_out = spine_data_preparer.dataframe_out.apply(self.shift_boxes, axis=1)
-                non_overlapping_boxes = spine_data_preparer.remove_overlapping_boxes()
-                r_image = self.put_boxes_on_image(img_file, non_overlapping_boxes)
+                r_image, _ = self.analyze_image_with_scale(img_file, scale)
                 r_image.show()
                 yield r_image
             else:
@@ -108,6 +107,13 @@ class SpineYolo(object):
                 except:
                     print('Couldn''t load image file: {}'.format(img_file))
                     continue
+
+    def analyze_image_with_scale(self, img_file, scale):
+        spine_data_preparer = self.split_and_detect(img_file, scale)
+        spine_data_preparer.dataframe_out = spine_data_preparer.dataframe_out.apply(self.shift_boxes, axis=1)
+        non_overlapping_boxes = spine_data_preparer.remove_overlapping_boxes()
+        r_image = self.put_boxes_on_image(img_file, non_overlapping_boxes)
+        return r_image, non_overlapping_boxes
 
     @staticmethod
     def shift_boxes(row):

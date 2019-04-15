@@ -1,0 +1,16 @@
+div.results > ul {
+    background: #3399ff;
+    padding: 5px;
+    list-style-type: none;
+    }
+
+div.results > ul#horizontal-list li{
+    list-style-type: none;
+    display: inline;
+    padding-right: 20px;
+    }
+/*div.results ul li {*/
+/*    background: #cce5ff;*/
+/*    margin: 5px;*/
+/*    list-style-type:none;*/
+/*}*/

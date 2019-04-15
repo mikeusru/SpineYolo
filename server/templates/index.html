@@ -8,16 +8,15 @@
 
 <h2>SpineYOLO!!!</h2>
 
-
 <div class="'ml-container">
 
-    <form action="{{ url_for('predict') }}" method="POST">
+    <form id="upload_form" action="{{url_for('predict')}}" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" accept = "image/*" multiple>
         <p> Enter Scale in pixels/um</p>
-        <textarea name="scale" rows="1" cols="50"></textarea>
-        <br/>
-
-        <input type="submit" class="btn-info" value="predict">
+        <input name="scale">
+        <input type="submit" class="btn-predict" value="predict">
     </form>
+
 </div>
 
 </body>

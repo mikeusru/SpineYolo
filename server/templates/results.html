@@ -3,18 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <title>Results</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-<h2>RESULTZ</h2>
+<h2>Results</h2>
 
 <div class="results">
 
-    <ul>
-        {% for item in boxes%}
-            <li>{{ item }}</li>
+    <ul id="horizontal-list">
+        {% for item in boxes %}
+            <li>XYRB: </li>
+            {% for xyrb in item[:4] %}
+                <li>{{ '{:.2f}'.format(xyrb)}}</li>
+            {% endfor %}
+            <li>Score: </li>
+            <li>{{'{:.2f}'.format(item[4])}}</li>
+            <li><br></li>
         {% endfor %}
     </ul>
 
+
+</div>
+
+<div class="analyzed_image">
+
+    <img src = "{{ url_for('static', filename=image_name)}}" alt="Analyzed Image">
 
 </div>
 

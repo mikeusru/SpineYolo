@@ -64,12 +64,16 @@ class SpineYolo(object):
                 r_images.append(r_image)
                 r_boxes.append(boxes)
                 # r_image.show()
-        self.yolo_detector.close_session()
+        # self.yolo_detector.close_session()
         self.r_images = r_images
         self.r_boxes = r_boxes
 
     def set_detector(self):
+        # if self.yolo_detector is not None:
+        #     self.yolo_detector.close_session()
         self.yolo_detector = YOLO(**{"model_path": self.model_path})
+        print('\n\n detector set \n\n')
+        # self.yolo_detector.sess = self.sess
 
     def detect(self, img_path=None, scale=None):
         if img_path is not None:

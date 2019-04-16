@@ -1,15 +1,10 @@
 import os
-import urllib.request
-from PIL import Image
-from io import BytesIO
-import numpy as np
 from flask import Flask, render_template, request
 from spine_yolo import SpineYolo
 import random
 
 app = Flask(__name__)
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
-STARTED = False
 
 
 @app.route('/')
@@ -23,6 +18,9 @@ def predict():
     scale = int(request.form['scale'])
     # sp = SpineYolo()
     # sp.set_model_path('model_data/yolov3_spines_combined.h5')
+    # sp.set_detector()
+    # sp.set_detector()
+    # sp.yolo_detector.close_session()
     print(uploaded_image_path, scale)
     sp.detect(uploaded_image_path, scale)
     r_image = sp.r_images[0]
@@ -58,10 +56,10 @@ def save_image(image):
 
 
 if __name__ == '__main__':
-    if not STARTED:
-        sp = SpineYolo()
-        sp.set_model_path('model_data/yolov3_spines_combined.h5')
-        sp.set_detector()
-        STARTED = True
+    print("Current Working Directory ", os.getcwd())
+    sp = SpineYolo()
+    sp.set_model_path('model_data/yolov3_spines_combined.h5')
+    sp.set_detector()
+    # sp.set_detector()
     # sp.detect('server//static//file_1266test_spines.jpg',10)
-    app.run(host='0.0.0.0', port=8888, debug=True)
+    app.run(host='0.0.0.0', port=8888, debug=False)

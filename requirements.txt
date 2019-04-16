@@ -11,7 +11,7 @@ h5py==2.8.0
 html5lib==0.9999999
 idna==2.6
 ipykernel==4.8.2
-ipython==6.2.1
+ipython==5.0.0
 ipython-genutils==0.2.0
 jedi==0.11.1
 jupyter-client==5.2.3
@@ -65,3 +65,6 @@ scikit-image==0.13.1
 scipy==1.0.0
 six==1.11.0
 watchdog==0.8.3
+Flask==0.11.1
+gunicorn==19.6.0
+request

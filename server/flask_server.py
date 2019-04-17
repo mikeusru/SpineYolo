@@ -16,11 +16,6 @@ def index():
 def predict():
     uploaded_image_path = upload_image(request.files.getlist('file'))
     scale = int(request.form['scale'])
-    # sp = SpineYolo()
-    # sp.set_model_path('model_data/yolov3_spines_combined.h5')
-    # sp.set_detector()
-    # sp.set_detector()
-    # sp.yolo_detector.close_session()
     print(uploaded_image_path, scale)
     sp.detect(uploaded_image_path, scale)
     r_image = sp.r_images[0]
@@ -54,12 +49,14 @@ def save_image(image):
     image.save(image_path)
     return img_name
 
+@app.route("/submit_training_data", methods=['POST'])
+def submit_training_data():
+    return render_template("add_training.html")
+
 
 if __name__ == '__main__':
     print("Current Working Directory ", os.getcwd())
     sp = SpineYolo()
     sp.set_model_path('model_data/yolov3_spines_combined.h5')
     sp.set_detector()
-    # sp.set_detector()
-    # sp.detect('server//static//file_1266test_spines.jpg',10)
-    app.run(host='0.0.0.0', port=8888, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=False)

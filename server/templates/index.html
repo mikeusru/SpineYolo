@@ -6,7 +6,7 @@
 </head>
 <body>
 
-<h2>SpineYOLO!!!</h2>
+<h1>SpineYOLO!!!</h1>
 
 <div class="'ml-container">
 
@@ -15,6 +15,20 @@
         <p> Enter Scale in pixels/um</p>
         <input name="scale">
         <input type="submit" class="btn-predict" value="predict">
+    </form>
+
+<h2>Add your own training data...</h2>
+    <p>This model has been trained on a limited amount of training data.
+        If it doesn't work for your data, we suggest you submit your own
+    images along with their corresponding labels. It is suggested that you label at least
+        300 spines.</p>
+    <p>Please see the GitHub page for instructions on labeling training data</p>
+
+    <a href="https://github.com/mikeusru/SpineYolo">SpineYolo GitHub</a>
+    <br>
+    <br>
+    <form id="submit_training_data_form" action="{{url_for('submit_training_data')}}" method="POST" enctype="multipart/form-data">
+        <input type ="submit" class="btn-submit" value="Submit Training Data">
     </form>
 
 </div>

@@ -1,4 +1,6 @@
 import os
+
+import numpy as np
 from flask import Flask, render_template, request
 from spine_yolo import SpineYolo
 import random
@@ -20,9 +22,9 @@ def predict():
     sp.detect(uploaded_image_path, scale)
     r_image = sp.r_images[0]
     r_boxes = sp.r_boxes
-    filename = save_image(r_image)
+    image_file, data_file = save_results(r_image, r_boxes)
     print('detection done')
-    return render_template("results.html", boxes=r_boxes, image_name=filename)
+    return render_template("results.html", boxes=r_boxes, image_name=image_file, data_name=data_file)
 
 
 def upload_image(file_list):
@@ -41,13 +43,16 @@ def upload_image(file_list):
     return destination
 
 
-def save_image(image):
+def save_results(image, boxes):
     rand_number = random.randint(1, 100000)
     img_name = 'r_img' + str(rand_number) + '.jpg'
     image_path = os.path.join('server', 'static', img_name)
-
     image.save(image_path)
-    return img_name
+    boxes_name = 'r_boxes'+str(rand_number) + '.csv'
+    boxes_path = os.path.join('server', 'static', boxes_name)
+    np.savetxt(boxes_path, boxes, delimiter=',')
+    return img_name, boxes_name
+
 
 @app.route("/submit_training_data", methods=['POST'])
 def submit_training_data():

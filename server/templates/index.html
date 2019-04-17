@@ -6,8 +6,9 @@
 </head>
 <body>
 
-<h1>SpineYOLO!!!</h1>
-
+<h1>SpineYOLO</h1>
+<p><img src="{{ url_for('static', filename='images/front_page_example.jpg') }}"
+        alt="Sample Image" float="right"></p>
 <div class="'ml-container">
 
     <form id="upload_form" action="{{url_for('predict')}}" method="POST" enctype="multipart/form-data">
@@ -21,7 +22,7 @@
     <p>This model has been trained on a limited amount of training data.
         If it doesn't work for your data, we suggest you submit your own
     images along with their corresponding labels. It is suggested that you label at least
-        300 spines.</p>
+        300 spines for the model to work with your dataset.</p>
     <p>Please see the GitHub page for instructions on labeling training data</p>
 
     <a href="https://github.com/mikeusru/SpineYolo">SpineYolo GitHub</a>

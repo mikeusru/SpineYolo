@@ -7,24 +7,25 @@
 </head>
 <body>
 <h2>Results</h2>
-
+<p>Format is [X, Y, Right, Bottom, Score]</p>
 <div class="results">
 
     <ul id="horizontal-list">
         {% for item in boxes %}
-            <li>XYRB: </li>
             {% for xyrb in item[:4] %}
                 <li>{{ '{:.2f}'.format(xyrb)}}</li>
             {% endfor %}
-            <li>Score: </li>
             <li>{{'{:.2f}'.format(item[4])}}</li>
             <li><br></li>
         {% endfor %}
     </ul>
+    <br>
 
+    <a href="{{ url_for('static', filename=data_name)}}">Download Results as CSV</a>
 
 </div>
 
+<br>
 <div class="analyzed_image">
 
     <img src = "{{ url_for('static', filename=image_name)}}" alt="Analyzed Image">

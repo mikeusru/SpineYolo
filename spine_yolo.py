@@ -33,7 +33,7 @@ class SpineYolo(object):
         self.anchors_path = '.'
         self.model_path = '.'
         if _args is not None:
-            self.set_args(_args)
+            self._set_args(_args)
         self.log_dir = os.path.join('logs', '000')
         self.yolo_detector = None
         self.r_images = []

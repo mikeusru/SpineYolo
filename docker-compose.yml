@@ -1,0 +1,10 @@
+version: '3'
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/host
+  spine_yolo:
+    image: "mikeusru/modern_deep_learning:latest"

@@ -26,7 +26,9 @@ python main.py
 
 ## Installation (Linux)
 
-You use linux you know what you're doing. I'll make a docker container for this eventually.
+I MADE A WHOLE VIDEO AND EVERYTHING!!! <br>
+But first get nvidia-docker <br>
+https://youtu.be/EFUZdgkodaY
 
 ### Usage
 For the Gui, run main.py

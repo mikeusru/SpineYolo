@@ -16,9 +16,9 @@ class SpineImageDataPreparer:
         self.labeled = True
         self.resize_to_scale = True
         self.saving = True
-        self.target_scale_px_per_um = 15
-        self.sliding_window_side = 256
-        self.sliding_window_step = 128
+        self.target_scale_px_per_um = 10
+        self.sliding_window_side = 416
+        self.sliding_window_step = 208
         self.initial_directory = os.path.join("C:\\Users\\smirnovm\\Documents\\Data\\keras_yolo3_spine_training_tifs")
         self.input_files = dict()
         self.initial_image_file_dict = dict()
@@ -48,7 +48,7 @@ class SpineImageDataPreparer:
     def set_resizing(self, do_resizing):
         self.resize_to_scale = do_resizing
 
-    def set_sliding_window_props(self, make_windows, window_side=256, window_step=128):
+    def set_sliding_window_props(self, make_windows, window_side, window_step):
         self.do_sliding_windows = make_windows
         if make_windows:
             self.sliding_window_side = window_side

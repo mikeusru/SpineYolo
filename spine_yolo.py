@@ -221,14 +221,6 @@ class SpineYolo(object):
     def set_model_path(self, path):
         self.model_path = path
 
-    def prepare_image_data(self, images_path, is_labeled=False, train_test_split=0.8, image_data_out_path=None):
-        spine_data_preparer = SpineImageDataPreparer()
-        spine_data_preparer.set_initial_directory(images_path)
-        spine_data_preparer.set_labeled_state(is_labeled)
-        spine_data_preparer.set_train_test_split(train_test_split)
-        spine_data_preparer.set_save_directory(image_data_out_path)
-        spine_data_preparer.run()
-
 
 if __name__ == '__main__':
     argparser = YoloArgparse()

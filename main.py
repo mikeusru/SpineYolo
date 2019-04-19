@@ -5,6 +5,7 @@ from tkinter.filedialog import askdirectory, askopenfilename
 
 from spine_yolo import SpineYolo
 from yolo_argparser import YoloArgparse
+from prepate_image_data import prepare_image_data
 
 LARGE_FONT = "Verdana, 12"
 NORMAL_FONT = "Verdana, 10"
@@ -84,10 +85,10 @@ class SpineYoloGui(tk.Tk):
         self.training_data_path.set(path)
 
     def prepare_training_data(self):
-        self.spine_yolo.prepare_image_data(self.training_data_path.get(),
-                                           is_labeled=True,
-                                           train_test_split=self.train_test_split.get(),
-                                           image_data_out_path=self.image_data_out_path)
+        prepare_image_data(self.training_data_path.get(),
+                           is_labeled=True,
+                           train_test_split=self.train_test_split.get(),
+                           image_data_out_path=self.image_data_out_path)
 
     def select_model(self):
         path = askopenfilename(initialdir=self.trained_model_path.get(),

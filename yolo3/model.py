@@ -286,17 +286,19 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
 
         # Find best anchor for each true box
         best_anchor = np.argmax(iou, axis=-1)
-
-        for t, n in enumerate(best_anchor):
-            for l in range(num_layers):
-                if n in anchor_mask[l]:
-                    i = np.floor(true_boxes[b,t,0]*grid_shapes[l][1]).astype('int32')
-                    j = np.floor(true_boxes[b,t,1]*grid_shapes[l][0]).astype('int32')
-                    k = anchor_mask[l].index(n)
-                    c = true_boxes[b,t, 4].astype('int32')
-                    y_true[l][b, j, i, k, 0:4] = true_boxes[b,t, 0:4]
-                    y_true[l][b, j, i, k, 4] = 1
-                    y_true[l][b, j, i, k, 5+c] = 1
+        try:
+            for t, n in enumerate(best_anchor):
+                for l in range(num_layers):
+                    if n in anchor_mask[l]:
+                        i = np.floor(true_boxes[b,t,0]*grid_shapes[l][1]).astype('int32')
+                        j = np.floor(true_boxes[b,t,1]*grid_shapes[l][0]).astype('int32')
+                        k = anchor_mask[l].index(n)
+                        c = true_boxes[b,t, 4].astype('int32')
+                        y_true[l][b, j, i, k, 0:4] = true_boxes[b, t, 0:4]
+                        y_true[l][b, j, i, k, 4] = 1
+                        y_true[l][b, j, i, k, 5+c] = 1
+        except:
+            print('here')
 
     return y_true
 

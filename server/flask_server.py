@@ -31,7 +31,7 @@ def upload_image(file_list):
     sub_path = 'image_uploads'
     upload_target = os.path.join(STATIC_ROOT, sub_path)
     if not os.path.isdir(upload_target):
-        os.mkdirs(upload_target)
+        os.makedirs(upload_target)
     for file in file_list:
         filename = file.filename
         timestr = time.strftime("%Y%m%d%H%M%S")
@@ -43,13 +43,13 @@ def upload_image(file_list):
 def save_results(image, boxes):
     sub_path = 'results'
     if not os.path.isdir(os.path.join(STATIC_ROOT, sub_path)):
-        os.mkdirs(os.path.join(STATIC_ROOT, sub_path))
+        os.makedirs(os.path.join(STATIC_ROOT, sub_path))
     timestr = time.strftime("%Y%m%d%H%M%S")
     img_path_relative = os.path.join(sub_path, 'r_img' + timestr + '.jpg')
-    image_path_full = os.path.join(STATIC_ROOT, sub_path, img_path_relative)
+    image_path_full = os.path.join(STATIC_ROOT, img_path_relative)
     image.save(image_path_full)
-    boxes_path_relative = s.path.join(sub_path, 'r_boxes'+timestr + '.csv')
-    boxes_path_full = os.path.join(STATIC_ROOT, sub_path, boxes_path_relative)
+    boxes_path_relative = os.path.join(sub_path, 'r_boxes' + timestr + '.csv')
+    boxes_path_full = os.path.join(STATIC_ROOT, boxes_path_relative)
     np.savetxt(boxes_path_full, boxes, delimiter=',')
     return img_path_relative, boxes_path_relative
 

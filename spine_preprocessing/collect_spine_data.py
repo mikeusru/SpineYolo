@@ -8,6 +8,8 @@ from PIL import Image
 from skimage import transform
 from sklearn.model_selection import train_test_split
 
+from misc_utils import format_path_for_os
+
 
 class SpineImageDataPreparer:
 
@@ -74,7 +76,7 @@ class SpineImageDataPreparer:
         print('Saving done yay')
 
     def process_individual_row(self, row, image_dir):
-        image_path = row.name
+        image_path = format_path_for_os(row.name)
         self.load_image(image_path)
         if 'bounding_boxes' not in row.keys():
             row.bounding_boxes = None

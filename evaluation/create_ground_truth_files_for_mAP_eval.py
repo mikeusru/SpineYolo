@@ -1,3 +1,5 @@
+## File used for mAP evaluation
+
 import os
 import ntpath
 import argparse

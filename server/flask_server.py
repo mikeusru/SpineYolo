@@ -3,7 +3,7 @@ import time
 import numpy as np
 from flask import Flask, render_template, request
 from spine_yolo import SpineYolo
-import random
+from main import load_settings_file
 
 app = Flask(__name__)
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -62,6 +62,7 @@ def submit_training_data():
 if __name__ == '__main__':
     print("Current Working Directory ", os.getcwd())
     sp = SpineYolo()
-    sp.set_model_path('model_data/yolov3_spines_combined.h5')
+    settings_dict = load_settings_file('settings.txt')
+    sp.set_model_path(settings_dict['trained_model_path'])
     sp.set_detector()
     app.run(host='0.0.0.0', port=5000, debug=False)

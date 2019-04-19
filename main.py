@@ -22,7 +22,7 @@ class SpineYoloGui(tk.Tk):
         self.train_test_split = tk.StringVar()
         self.log_dir = tk.StringVar()
         self.image_data_out_path = None
-        self.load_settings()
+        self.import_settings()
         self.gui = self.define_gui_elements()
 
     def define_gui_elements(self):
@@ -110,19 +110,24 @@ class SpineYoloGui(tk.Tk):
         self.spine_yolo.set_log_dir(self.log_dir.get())
         self.spine_yolo.train_yolo()
 
-    def load_settings(self):
-        with open('settings.txt') as f:
-            lines = f.readlines()
-        lines = [line.strip() for line in lines]
-        lines = [line.split() for line in lines]
-        settings_dict = {}
-        for line in lines:
-            settings_dict[line[0]] = line[2]
+    def import_settings(self):
+        settings_dict = load_settings_file('settings.txt')
         self.image_data_out_path = settings_dict['image_data_out_path']
         self.training_data_path.set(settings_dict['training_data_path'])
         self.trained_model_path.set(settings_dict['trained_model_path'])
         self.train_test_split.set(settings_dict['train_test_split'])
         self.log_dir.set(settings_dict['log_dir'])
+
+
+def load_settings_file(filepath='settings.txt'):
+    with open(filepath) as f:
+        lines = f.readlines()
+    lines = [line.strip() for line in lines]
+    lines = [line.split() for line in lines]
+    settings_dict = {}
+    for line in lines:
+        settings_dict[line[0]] = line[2]
+    return settings_dict
 
 
 if __name__ == "__main__":

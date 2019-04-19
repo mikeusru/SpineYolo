@@ -5,7 +5,7 @@ from tkinter.filedialog import askdirectory, askopenfilename
 
 from spine_yolo import SpineYolo
 from yolo_argparser import YoloArgparse
-from prepate_image_data import prepare_image_data
+from prepare_image_data import prepare_image_data
 
 LARGE_FONT = "Verdana, 12"
 NORMAL_FONT = "Verdana, 10"

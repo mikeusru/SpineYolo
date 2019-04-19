@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter.filedialog import askdirectory, askopenfilename
 
+from misc_utils import format_path_for_os
 from spine_yolo import SpineYolo
 from yolo_argparser import YoloArgparse
 from prepare_image_data import prepare_image_data
@@ -113,9 +114,9 @@ class SpineYoloGui(tk.Tk):
 
     def import_settings(self):
         settings_dict = load_settings_file('settings.txt')
-        self.image_data_out_path = settings_dict['image_data_out_path']
-        self.training_data_path.set(settings_dict['training_data_path'])
-        self.trained_model_path.set(settings_dict['trained_model_path'])
+        self.image_data_out_path = format_path_for_os(settings_dict['image_data_out_path'])
+        self.training_data_path.set(format_path_for_os(settings_dict['training_data_path']))
+        self.trained_model_path.set(format_path_for_os(settings_dict['trained_model_path']))
         self.train_test_split.set(settings_dict['train_test_split'])
         self.log_dir.set(settings_dict['log_dir'])
 

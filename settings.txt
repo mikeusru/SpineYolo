@@ -1,5 +1,5 @@
 training_data_path = data\hippocampal_visual_purkinje_combined\
 trained_model_path = model_data/yolov3_spines_combined_latest.h5
 train_test_split = .8
-log_dir = logs\combined_cell_types_new_purkinjes
+log_dir = logs\larger_windows_10_um_scale
 image_data_out_path = data\purkinje_windows\

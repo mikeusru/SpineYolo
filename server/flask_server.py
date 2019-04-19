@@ -1,5 +1,5 @@
 import os
-
+import time
 import numpy as np
 from flask import Flask, render_template, request
 from spine_yolo import SpineYolo
@@ -7,6 +7,7 @@ import random
 
 app = Flask(__name__)
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+STATIC_ROOT = os.path.join(APP_ROOT, 'static')
 
 
 @app.route('/')
@@ -18,7 +19,6 @@ def index():
 def predict():
     uploaded_image_path = upload_image(request.files.getlist('file'))
     scale = int(request.form['scale'])
-    print(uploaded_image_path, scale)
     sp.detect(uploaded_image_path, scale)
     r_image = sp.r_images[0]
     r_boxes = sp.r_boxes
@@ -28,30 +28,30 @@ def predict():
 
 
 def upload_image(file_list):
-    upload_target = os.path.join(APP_ROOT, 'static')
-    print('\n\n', upload_target, '\n\n')
-    print(file_list)
+    sub_path = 'image_uploads'
+    upload_target = os.path.join(STATIC_ROOT, sub_path)
     if not os.path.isdir(upload_target):
-        os.mkdir(upload_target)
+        os.mkdirs(upload_target)
     for file in file_list:
         filename = file.filename
-        rand_number = random.randint(1, 100000)
-        destination = os.path.join(upload_target,
-                                   'file_' + str(rand_number) + filename)
-        print(destination)
+        timestr = time.strftime("%Y%m%d%H%M%S")
+        destination = os.path.join(upload_target, 'image_' + timestr + filename)
         file.save(destination)
     return destination
 
 
 def save_results(image, boxes):
-    rand_number = random.randint(1, 100000)
-    img_name = 'r_img' + str(rand_number) + '.jpg'
-    image_path = os.path.join('server', 'static', img_name)
-    image.save(image_path)
-    boxes_name = 'r_boxes'+str(rand_number) + '.csv'
-    boxes_path = os.path.join('server', 'static', boxes_name)
-    np.savetxt(boxes_path, boxes, delimiter=',')
-    return img_name, boxes_name
+    sub_path = 'results'
+    if not os.path.isdir(os.path.join(STATIC_ROOT, sub_path)):
+        os.mkdirs(os.path.join(STATIC_ROOT, sub_path))
+    timestr = time.strftime("%Y%m%d%H%M%S")
+    img_path_relative = os.path.join(sub_path, 'r_img' + timestr + '.jpg')
+    image_path_full = os.path.join(STATIC_ROOT, sub_path, img_path_relative)
+    image.save(image_path_full)
+    boxes_path_relative = s.path.join(sub_path, 'r_boxes'+timestr + '.csv')
+    boxes_path_full = os.path.join(STATIC_ROOT, sub_path, boxes_path_relative)
+    np.savetxt(boxes_path_full, boxes, delimiter=',')
+    return img_path_relative, boxes_path_relative
 
 
 @app.route("/submit_training_data", methods=['POST'])

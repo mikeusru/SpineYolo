@@ -66,4 +66,4 @@ scipy==1.0.0
 six==1.11.0
 watchdog==0.8.3
 Flask==0.11.1
-request
+gunicorn==19.6.0

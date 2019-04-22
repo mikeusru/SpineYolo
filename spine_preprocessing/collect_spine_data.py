@@ -50,10 +50,11 @@ class SpineImageDataPreparer:
     def set_resizing(self, do_resizing):
         self.resize_to_scale = do_resizing
 
-    def set_sliding_window_props(self, make_windows, window_side, window_step):
+    def set_sliding_window_props(self, make_windows, window_side=None, window_step=None):
         self.do_sliding_windows = make_windows
-        if make_windows:
+        if window_side is not None:
             self.sliding_window_side = window_side
+        if window_step is not None:
             self.sliding_window_step = window_step
 
     def set_initial_directory(self, path):

@@ -104,6 +104,11 @@ class YOLO(object):
                                            score_threshold=self.score, iou_threshold=self.iou)
         return boxes, scores, classes
 
+    def save_model(self, path):
+        model_json = self.yolo_model.to_json()
+        with open(path, 'w') as json_file:
+            json_file.write(model_json)
+
     def detect_image(self, image):
         start = timer()
         if self.model_image_size != (None, None):

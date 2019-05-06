@@ -6,10 +6,10 @@ import sys
 import os
 from data_aug.bbox_util import *
 from skimage import transform, exposure
+from PIL import ImageOps
 
 lib_path = os.path.join(os.path.realpath("."), "data_aug")
 sys.path.append(lib_path)
-
 
 class RandomHorizontalFlip(object):
     """Randomly horizontally flips the Image with the probability *p*
@@ -516,7 +516,10 @@ class RandomContrastStretch(object):
         if random.random() < self.p:
             p2, p98 = np.percentile(img, (2, 98))
             img = exposure.rescale_intensity(img, in_range=(p2, p98))
-        return img, bboxes
+            # print('contrast {}'.format(img.dtype))
+            # cutoff_percent = 2
+            # img = ImageOps.autocontrast(img, cutoff=cutoff_percent)
+        return img.astype(np.uint8), bboxes
 
 
 class RandomHistogramEqualization(object):
@@ -526,8 +529,10 @@ class RandomHistogramEqualization(object):
 
     def __call__(self, img, bboxes):
         if random.random() < self.p:
-            img = exposure.equalize_hist(img)
-        return img, bboxes
+            img = exposure.equalize_hist(img)*255
+            # print('histeq {}'.format(img.dtype))
+            # img = cv2.equalizeHist(img)
+        return img.astype(np.uint8), bboxes
 
 
 class RandomAdaptiveHistogramEqualization(object):
@@ -537,8 +542,12 @@ class RandomAdaptiveHistogramEqualization(object):
 
     def __call__(self, img, bboxes):
         if random.random() < self.p:
-            img = exposure.equalize_adapthist(img, clip_limit=0.03)
-        return img, bboxes
+            img = exposure.equalize_adapthist(img, clip_limit=0.03)*255
+            # print('adapthisteq {}'.format(img.dtype))
+            # clahe = cv2.createCLAHE(clip_limit=2, tileGridSize=(16, 16))
+            # img = clahe.apply(img)
+        return img.astype(np.uint8), bboxes
+
 
 class RandomShear(object):
     """Randomly shears an image in horizontal direction   

@@ -49,26 +49,31 @@ def do_data_augmentation(annotation_line, input_shape, max_boxes=20):
     """using https://github.com/Paperspace/DataAugmentationForObjectDetection"""
     line = annotation_line.split()
     image = Image.open(line[0])
-    iw, ih = image.size
-    h, w = input_shape
     box = np.array([np.array(list(map(float, box.split(',')))) for box in line[1:]])
-    # resize image
-    scale = min(w / iw, h / ih)
-    nw = int(iw * scale)
-    nh = int(ih * scale)
-    dx = (w - nw) // 2
-    dy = (h - nh) // 2
-    image = image.resize((nw, nh), Image.BICUBIC)
+    h, w = input_shape
+    if False:
+        # resize image and boxes
+        iw, ih = image.size
+        # resize image
+        scale = min(w / iw, h / ih)
+        nw = int(iw * scale)
+        nh = int(ih * scale)
+        dx = (w - nw) // 2
+        dy = (h - nh) // 2
+        image = image.resize((nw, nh), Image.BICUBIC)
+
+        # correct boxes
+        if len(box) > 0:
+            np.random.shuffle(box)
+            if len(box) > max_boxes: box = box[:max_boxes]
+            box[:, [0, 2]] = box[:, [0, 2]] * scale + dx
+            box[:, [1, 3]] = box[:, [1, 3]] * scale + dy
+    else:
+        dx, dy = (0, 0)
+
     new_image = Image.new('RGB', (w, h), (128, 128, 128))
     new_image.paste(image, (dx, dy))
     image_data = np.array(new_image)
-
-    # correct boxes
-    if len(box) > 0:
-        np.random.shuffle(box)
-        if len(box) > max_boxes: box = box[:max_boxes]
-        box[:, [0, 2]] = box[:, [0, 2]] * scale + dx
-        box[:, [1, 3]] = box[:, [1, 3]] * scale + dy
 
     show_image_transformation(image_data, box)
 
@@ -81,39 +86,52 @@ def do_data_augmentation(annotation_line, input_shape, max_boxes=20):
             if count > 100:
                 print('counter reached {}'.format(count))
             image_data_transformed, box_transformed = RandomHorizontalFlip(.5)(image_data.copy(), box.copy())
-            # show_image_transformation(image_data_transformed, box_transformed)
+            show_image_transformation(image_data_transformed, box_transformed)
+            stop_flag(image_data_transformed)
             if len(box_transformed) == 0:
                 continue
-            image_data_transformed, box_transformed = RandomContrastStretch(.3)(image_data.copy(), box.copy())
-            # show_image_transformation(image_data_transformed, box_transformed)
+            image_data_transformed, box_transformed = RandomContrastStretch(.3)(image_data_transformed.copy(),
+                                                                                box_transformed.copy())
+            show_image_transformation(image_data_transformed, box_transformed)
+            stop_flag(image_data_transformed)
             if len(box_transformed) == 0:
                 continue
-            image_data_transformed, box_transformed = RandomHistogramEqualization(.3)(image_data.copy(), box.copy())
-            # show_image_transformation(image_data_transformed, box_transformed)
+            image_data_transformed, box_transformed = RandomHistogramEqualization(.3)(image_data_transformed.copy(),
+                                                                                      box_transformed.copy())
+            show_image_transformation(image_data_transformed, box_transformed)
+            stop_flag(image_data_transformed)
             if len(box_transformed) == 0:
                 continue
-            image_data_transformed, box_transformed = RandomAdaptiveHistogramEqualization(.3)(image_data.copy(), box.copy())
-            # show_image_transformation(image_data_transformed, box_transformed)
+            image_data_transformed, box_transformed = RandomAdaptiveHistogramEqualization(.3)(
+                image_data_transformed.copy(),
+                box_transformed.copy())
+            show_image_transformation(image_data_transformed, box_transformed)
+            stop_flag(image_data_transformed)
             if len(box_transformed) == 0:
                 continue
             image_data_transformed, box_transformed = RandomScale(.3, diff=True)(image_data_transformed.copy(),
                                                                                  box_transformed.copy())
-            # show_image_transformation(image_data_transformed, box_transformed)
+            show_image_transformation(image_data_transformed, box_transformed)
+            stop_flag(image_data_transformed)
             if len(box_transformed) == 0:
                 continue
             image_data_transformed, box_transformed = RandomTranslate(.3, diff=True)(image_data_transformed.copy(),
                                                                                      box_transformed.copy())
-            # show_image_transformation(image_data_transformed, box_transformed)
+            show_image_transformation(image_data_transformed, box_transformed)
+            stop_flag(image_data_transformed)
             if len(box_transformed) == 0:
                 continue
             image_data_transformed, box_transformed = RandomRotate(20)(image_data_transformed.copy(),
                                                                        box_transformed.copy())
-            # show_image_transformation(image_data_transformed, box_transformed)
+            show_image_transformation(image_data_transformed, box_transformed)
+            stop_flag(image_data_transformed)
             if len(box_transformed) == 0:
                 continue
 
-            image_data_transformed, box_transformed = RandomShear(.2)(image_data_transformed.copy(), box_transformed.copy())
-            # show_image_transformation(image_data_transformed, box_transformed)
+            image_data_transformed, box_transformed = RandomShear(.2)(image_data_transformed.copy(),
+                                                                      box_transformed.copy())
+            show_image_transformation(image_data_transformed, box_transformed)
+            stop_flag(image_data_transformed)
             if len(box_transformed) > 0:
                 box_exists = True
     else:
@@ -125,6 +143,14 @@ def do_data_augmentation(annotation_line, input_shape, max_boxes=20):
     show_image_transformation(image_data_transformed, box_data)
 
     return image_data_transformed, np.round(box_data, 0)
+
+
+def stop_flag(image_data):
+    if False:
+        print(image_data.dtype)
+        print('max = {}'.format(image_data.max()))
+        if image_data.max() == 0:
+            print('flag reached')
 
 
 def get_random_data(annotation_line, input_shape, random=True, max_boxes=20, jitter=.3, hue=.1, sat=1.5, val=1.5,

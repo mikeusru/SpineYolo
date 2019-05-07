@@ -1,12 +1,12 @@
 import os
 
-out_path = os.path.join('data', 'training_data_combined')
+out_path = os.path.join('data', '15um', 'training_data_combined')
 if not os.path.isdir(out_path):
     os.makedirs(out_path)
 
-folders = [os.path.join('data', 'hipp_vis_train'),
-           os.path.join('data', 'purkinje_train_1'),
-           os.path.join('data', 'purkinje_train_2')]
+folders = [os.path.join('data', '15um', 'vis_hipp'),
+           os.path.join('data', '15um', 'purkinje_1'),
+           os.path.join('data', '15um', 'purkinje_2')]
 
 with open(os.path.join(out_path, 'train.txt'), 'w') as out_file:
     for folder in folders:

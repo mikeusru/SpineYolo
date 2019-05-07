@@ -47,7 +47,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
     checkpoint = ModelCheckpoint(os.path.join(log_dir, 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5'),
                                  monitor='val_loss', save_weights_only=True, save_best_only=True, period=3)
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
-    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1)
+    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=30, verbose=1)
 
     num_val = len(parsed_validation_data)
     num_train = len(parsed_training_data)
@@ -79,7 +79,7 @@ def _main(parsed_training_data=None, parsed_validation_data=None, log_dir=None,
     if True:
         for i in range(len(model.layers)):
             model.layers[i].trainable = True
-        model.compile(optimizer=Adam(lr=1e-4),
+        model.compile(optimizer=Adam(lr=1e-3),
                       loss={'yolo_loss': lambda y_true, y_pred: y_pred})  # recompile to apply the change
         print('Unfreeze all of the layers.')
 
@@ -190,7 +190,7 @@ def data_generator(annotation_lines, batch_size, input_shape, anchors, num_class
             if i == 0:
                 np.random.shuffle(annotation_lines)
             # image, box = get_random_data(annotation_lines[i], input_shape, random=True)
-            image, box = do_data_augmentation(annotation_lines[i], input_shape, max_boxes=100)
+            image, box = do_data_augmentation(annotation_lines[i], input_shape, max_boxes=300)
             image_data.append(image)
             box_data.append(box)
             i = (i + 1) % n

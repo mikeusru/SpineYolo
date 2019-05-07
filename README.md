@@ -77,10 +77,17 @@ optional arguments:
     https://youtu.be/H1nF8Uyt5o8
     
 
+2. Scale and make windows from training data using prepare_image_data.py
+
+    `python prepapre_image_data.py --input /path/to/labeled/data --output path/to/rescaled/data` 
+
+    If you have multiple training data folders, after splitting them into groups, use combine_training_data.py.
+
 3. Run main.py, set the model you want to use, and start training.  
     `python main.py `  
     Use your trained weights or checkpoint weights 
     
+
 If you want to use original pretrained weights for YOLOv3:  
     1. `wget https://pjreddie.com/media/files/darknet53.conv.74`  
     2. rename it as darknet53.weights  

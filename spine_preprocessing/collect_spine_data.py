@@ -18,7 +18,7 @@ class SpineImageDataPreparer:
         self.labeled = True
         self.resize_to_scale = True
         self.saving = True
-        self.target_scale_px_per_um = 10
+        self.target_scale_px_per_um = 15
         self.sliding_window_side = 416
         self.sliding_window_step = 208
         self.initial_directory = os.path.join("C:\\Users\\smirnovm\\Documents\\Data\\keras_yolo3_spine_training_tifs")

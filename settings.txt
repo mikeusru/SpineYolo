@@ -1,5 +1,5 @@
 training_data_path = data\training_data_combined\
-trained_model_path = model_data/yolov3_spines_combined_10um_scale.h5
+trained_model_path = model_data/yolov3_spines.h5
 train_test_split = .8
 log_dir = logs\image_scale_is_consistent
-image_data_out_path = data\purkinje_windows\
+image_data_out_path = data\15um\hipp_vis\

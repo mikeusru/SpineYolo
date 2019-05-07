@@ -35,7 +35,7 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--train_test_split', type=float, default = 0.8,
+        '--train_test_split', type=float, default=0.8,
         help='train/test split'
     )
 

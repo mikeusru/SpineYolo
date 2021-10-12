@@ -51,7 +51,7 @@ cycler==0.10.0
 decorator==4.2.1
 more-itertools==4.2.0
 networkx==2.1
-opencv-python==3.4.0.12
+opencv-python==4.2.0.32
 pathtools==0.1.2
 Pillow==5.0.0
 pluggy==0.6.0

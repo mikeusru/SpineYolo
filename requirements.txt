@@ -11,7 +11,7 @@ h5py==2.8.0
 html5lib==0.9999999
 idna==2.6
 ipykernel==4.8.2
-ipython==5.0.0
+ipython==7.16.3
 ipython-genutils==0.2.0
 jedi==0.11.1
 jupyter-client==5.2.3

@@ -53,7 +53,7 @@ more-itertools==4.2.0
 networkx==2.1
 opencv-python==3.4.0.12
 pathtools==0.1.2
-Pillow==5.0.0
+Pillow==9.0.1
 pluggy==0.6.0
 py==1.5.3
 pyparsing==2.2.0

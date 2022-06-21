@@ -21,7 +21,7 @@ kiwisolver==1.0.1
 Markdown==2.6.11
 matplotlib==2.2.0
 numexpr==2.6.4
-numpy==1.14.2
+numpy==1.22.0
 panda==0.3.1
 pandas==0.22.0
 parso==0.1.1

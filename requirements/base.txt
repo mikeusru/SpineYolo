@@ -2,7 +2,7 @@ scikit-learn
 absl-py==0.1.11
 astor==0.6.2
 bleach==1.5.0
-certifi==2018.1.18
+certifi==2022.12.7
 chardet==3.0.4
 decorator==4.2.1
 gast==0.2.0
